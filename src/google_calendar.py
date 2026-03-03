@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -10,6 +11,8 @@ from src.config import GOOGLE_CREDENTIALS_FILE, GOOGLE_TOKEN_FILE, GOOGLE_SCOPES
 from src.models import Attendee, Meeting
 
 logger = logging.getLogger(__name__)
+
+IST = ZoneInfo("Asia/Kolkata")
 
 # Email to exclude from attendees (the user's own email)
 OWN_EMAIL_DOMAIN = "mindruby.com"
@@ -49,11 +52,12 @@ def get_meetings_for_date(target_date: datetime) -> list[Meeting]:
     creds = authenticate()
     service = build("calendar", "v3", credentials=creds)
 
-    # Build time range for the target date (local timezone)
-    time_min = datetime.combine(target_date, datetime.min.time()).isoformat() + "Z"
-    time_max = datetime.combine(
-        target_date + timedelta(days=1), datetime.min.time()
-    ).isoformat() + "Z"
+    # Build time range for the target date in IST (midnight to midnight IST)
+    start_ist = datetime(target_date.year, target_date.month, target_date.day,
+                         0, 0, 0, tzinfo=IST)
+    end_ist = start_ist + timedelta(days=1)
+    time_min = start_ist.isoformat()
+    time_max = end_ist.isoformat()
 
     logger.info("Fetching meetings for %s", target_date.strftime("%Y-%m-%d"))
 

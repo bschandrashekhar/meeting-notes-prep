@@ -11,6 +11,7 @@ import logging
 import sys
 from datetime import date, datetime, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from src.config import LOGS_DIR
 from src.models import AttendeeInsight, DailyBrief, MeetingBrief
@@ -173,7 +174,8 @@ def main():
             print(f"Invalid date format: {args.date}. Use YYYY-MM-DD.")
             sys.exit(1)
     else:
-        target_date = date.today() + timedelta(days=1)
+        IST = ZoneInfo("Asia/Kolkata")
+        target_date = datetime.now(IST).date() + timedelta(days=1)
 
     try:
         run_prep(target_date)
