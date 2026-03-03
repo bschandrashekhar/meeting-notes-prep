@@ -171,6 +171,8 @@ talking points as JSON."""
             talking_points=parsed.get("talking_points", []),
         )
 
+    except anthropic.AuthenticationError:
+        raise  # propagate so main.py can fall back to ZoomInfo-only briefs
     except Exception as e:
         logger.error("Research failed for %s: %s", attendee.name, e)
         return AttendeeInsight(

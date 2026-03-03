@@ -87,31 +87,42 @@ def run_prep(target_date: date) -> None:
     # --- Stage 3: Research with Claude AI (skipped if no API key) ---
     from src.config import ANTHROPIC_API_KEY
 
-    if ANTHROPIC_API_KEY:
+    _use_claude = bool(ANTHROPIC_API_KEY)
+
+    if _use_claude:
         logger.info("Stage 3: Researching attendees with Claude AI...")
         from src.research import research_attendee, synthesize_meeting_brief
+        import anthropic as _anthropic
 
-        insights_by_name = {}
-        for name, attendee in all_attendees.items():
-            zoominfo = enrichments.get(name)
-            insight = research_attendee(attendee, zoominfo)
-            insights_by_name[name] = insight
-            logger.info("  Researched: %s", attendee.name)
+        try:
+            insights_by_name = {}
+            for name, attendee in all_attendees.items():
+                zoominfo = enrichments.get(name)
+                insight = research_attendee(attendee, zoominfo)
+                insights_by_name[name] = insight
+                logger.info("  Researched: %s", attendee.name)
 
-        meeting_briefs = []
-        for meeting in meetings:
-            attendee_insights = [
-                insights_by_name[att.name]
-                for att in meeting.attendees
-                if att.name in insights_by_name
-            ]
-            brief = synthesize_meeting_brief(meeting, attendee_insights)
-            meeting_briefs.append(brief)
-            logger.info("  Synthesized brief for: %s", meeting.title)
+            meeting_briefs = []
+            for meeting in meetings:
+                attendee_insights = [
+                    insights_by_name[att.name]
+                    for att in meeting.attendees
+                    if att.name in insights_by_name
+                ]
+                brief = synthesize_meeting_brief(meeting, attendee_insights)
+                meeting_briefs.append(brief)
+                logger.info("  Synthesized brief for: %s", meeting.title)
 
-    else:
-        logger.info("Stage 3: Skipping Claude AI research (ANTHROPIC_API_KEY not set)...")
+        except _anthropic.AuthenticationError:
+            logger.warning(
+                "Stage 3: Anthropic API key is invalid or has no credits — "
+                "falling back to ZoomInfo-only briefs."
+            )
+            _use_claude = False
 
+    if not _use_claude:
+        if not ANTHROPIC_API_KEY:
+            logger.info("Stage 3: Skipping Claude AI research (ANTHROPIC_API_KEY not set)...")
         # Build basic insights from ZoomInfo data only
         insights_by_name = {
             name: AttendeeInsight(
