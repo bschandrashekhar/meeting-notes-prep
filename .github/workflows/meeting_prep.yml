@@ -15,7 +15,7 @@ on:
   #   India (IST):               '30 13 * * *'
   # -------------------------------------------------------
   schedule:
-    - cron: '0 0 * * *'
+    - cron: '30 13 * * *'
 
   # Also allows you to trigger it manually from the GitHub UI
   # (useful for testing without waiting for the schedule)
