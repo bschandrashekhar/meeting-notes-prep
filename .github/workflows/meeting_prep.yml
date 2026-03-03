@@ -1,0 +1,79 @@
+name: Meeting Prep Brief
+
+on:
+  # -------------------------------------------------------
+  # Runs every day at 7 PM US Eastern Time.
+  # GitHub Actions uses UTC, so:
+  #   7 PM EST (UTC-5) = 00:00 UTC  → cron: '0 0 * * *'
+  #   7 PM EDT (UTC-4) = 23:00 UTC  → cron: '0 23 * * *'
+  #
+  # Change the cron line below to match your timezone:
+  #   US Eastern (most of year): '0 0 * * *'
+  #   US Central:                '0 1 * * *'
+  #   US Mountain:               '0 2 * * *'
+  #   US Pacific:                '0 3 * * *'
+  #   India (IST):               '30 13 * * *'
+  # -------------------------------------------------------
+  schedule:
+    - cron: '0 0 * * *'
+
+  # Also allows you to trigger it manually from the GitHub UI
+  # (useful for testing without waiting for the schedule)
+  workflow_dispatch:
+
+jobs:
+  run-meeting-prep:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Check out the repo code
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Set up Python 3.11
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # 3. Cache pip dependencies for faster runs
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: ${{ runner.os }}-pip-
+
+      # 4. Install dependencies
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # 5. Write Google credentials from GitHub Secrets to files
+      #    (these files are gitignored — never committed to the repo)
+      - name: Write Google credentials
+        run: |
+          echo '${{ secrets.GOOGLE_CREDENTIALS_JSON }}' > credentials.json
+          echo '${{ secrets.GOOGLE_TOKEN_JSON }}' > token.json
+
+      # 6. Create logs directory
+      - name: Create logs directory
+        run: mkdir -p logs
+
+      # 7. Run the meeting prep pipeline
+      #    By default, main.py preps for tomorrow's meetings (date_of_meeting = today + 1 day)
+      - name: Run meeting prep
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ZOOMINFO_USERNAME: ${{ secrets.ZOOMINFO_USERNAME }}
+          ZOOMINFO_PASSWORD: ${{ secrets.ZOOMINFO_PASSWORD }}
+          TARGET_EMAIL: sateesh@mindruby.com
+        run: python -m src.main
+
+      # 8. Upload logs as a downloadable artifact (kept for 7 days)
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: meeting-prep-logs-${{ github.run_id }}
+          path: logs/
+          retention-days: 7

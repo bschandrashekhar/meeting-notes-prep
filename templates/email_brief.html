@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meeting Prep Brief</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f7;font-family:Arial,Helvetica,sans-serif;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f7;">
+<tr><td align="center" style="padding:24px 16px;">
+<table role="presentation" width="640" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+
+<!-- Header -->
+<tr>
+<td style="background-color:#1a1a2e;padding:28px 32px;">
+  <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:600;">Meeting Prep Brief</h1>
+  <p style="margin:8px 0 0;color:#a0a0c0;font-size:14px;">{{ target_date }} &bull; {{ meeting_count }} meeting{{ 's' if meeting_count != 1 else '' }}</p>
+</td>
+</tr>
+
+{% for mb in brief.meeting_briefs %}
+<!-- Meeting Section -->
+<tr>
+<td style="padding:0;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+
+<!-- Meeting Header -->
+<tr>
+<td style="padding:24px 32px 12px;border-bottom:3px solid #4361ee;">
+  <h2 style="margin:0;color:#1a1a2e;font-size:18px;">{{ mb.meeting.title }}</h2>
+  <p style="margin:6px 0 0;color:#666;font-size:13px;">
+    {{ mb.meeting.start_time.strftime('%I:%M %p') }} &ndash; {{ mb.meeting.end_time.strftime('%I:%M %p') }}
+    {% if mb.meeting.location %}&bull; {{ mb.meeting.location }}{% endif %}
+  </p>
+  {% if mb.meeting.meet_link %}
+  <p style="margin:6px 0 0;">
+    <a href="{{ mb.meeting.meet_link }}" style="color:#4361ee;font-size:13px;text-decoration:none;">Join Meeting &rarr;</a>
+  </p>
+  {% endif %}
+</td>
+</tr>
+
+{% for insight in mb.attendee_insights %}
+<!-- Attendee Card -->
+<tr>
+<td style="padding:20px 32px 16px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e8e8ee;border-radius:6px;overflow:hidden;">
+
+<!-- Attendee Header -->
+<tr>
+<td style="background-color:#f8f8fc;padding:14px 20px;border-bottom:1px solid #e8e8ee;">
+  <h3 style="margin:0;color:#1a1a2e;font-size:15px;">{{ insight.attendee.name }}</h3>
+  {% if insight.zoominfo and insight.zoominfo.contact and insight.zoominfo.contact.title %}
+  <p style="margin:3px 0 0;color:#555;font-size:13px;">{{ insight.zoominfo.contact.title }}</p>
+  {% endif %}
+  <p style="margin:3px 0 0;color:#888;font-size:12px;">{{ insight.attendee.email }}</p>
+  {% if insight.zoominfo and insight.zoominfo.contact and insight.zoominfo.contact.linkedin_url %}
+  <a href="{{ insight.zoominfo.contact.linkedin_url }}" style="color:#4361ee;font-size:12px;text-decoration:none;">LinkedIn Profile</a>
+  {% endif %}
+</td>
+</tr>
+
+{% if insight.zoominfo and insight.zoominfo.company %}
+{% set co = insight.zoominfo.company %}
+<!-- Company Info -->
+<tr>
+<td style="padding:14px 20px;border-bottom:1px solid #e8e8ee;">
+  <p style="margin:0 0 6px;color:#1a1a2e;font-size:13px;font-weight:600;">Company: {{ co.name }}</p>
+  <table role="presentation" cellpadding="0" cellspacing="0" style="font-size:12px;color:#555;">
+    {% if co.industry %}<tr><td style="padding:2px 12px 2px 0;color:#888;">Industry</td><td style="padding:2px 0;">{{ co.industry }}</td></tr>{% endif %}
+    {% if co.revenue %}<tr><td style="padding:2px 12px 2px 0;color:#888;">Revenue</td><td style="padding:2px 0;">{{ co.revenue }}</td></tr>{% endif %}
+    {% if co.employee_count %}<tr><td style="padding:2px 12px 2px 0;color:#888;">Employees</td><td style="padding:2px 0;">{{ co.employee_count }}</td></tr>{% endif %}
+    {% if co.funding %}<tr><td style="padding:2px 12px 2px 0;color:#888;">Funding</td><td style="padding:2px 0;">{{ co.funding }}</td></tr>{% endif %}
+    {% if co.headquarters %}<tr><td style="padding:2px 12px 2px 0;color:#888;">HQ</td><td style="padding:2px 0;">{{ co.headquarters }}</td></tr>{% endif %}
+  </table>
+</td>
+</tr>
+{% endif %}
+
+{% if insight.zoominfo and insight.zoominfo.tech_stack %}
+<!-- Tech Stack -->
+<tr>
+<td style="padding:14px 20px;border-bottom:1px solid #e8e8ee;">
+  <p style="margin:0 0 6px;color:#1a1a2e;font-size:13px;font-weight:600;">Tech Stack</p>
+  {% for ts in insight.zoominfo.tech_stack[:6] %}
+  <p style="margin:0 0 3px;font-size:12px;">
+    <span style="color:#888;">{{ ts.category }}:</span>
+    <span style="color:#333;">{{ ts.technologies[:5]|join(', ') }}</span>
+  </p>
+  {% endfor %}
+</td>
+</tr>
+{% endif %}
+
+{% if insight.zoominfo and insight.zoominfo.intent_signals %}
+<!-- Intent Signals -->
+<tr>
+<td style="padding:14px 20px;border-bottom:1px solid #e8e8ee;">
+  <p style="margin:0 0 6px;color:#1a1a2e;font-size:13px;font-weight:600;">Intent Signals</p>
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+    {% for sig in insight.zoominfo.intent_signals[:5] %}
+    <tr>
+      <td style="padding:2px 0;font-size:12px;color:#333;">{{ sig.topic }}</td>
+      <td style="padding:2px 0;font-size:12px;color:#888;text-align:right;width:60px;">Score: {{ sig.score }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</td>
+</tr>
+{% endif %}
+
+{% if insight.zoominfo and insight.zoominfo.news %}
+<!-- News -->
+<tr>
+<td style="padding:14px 20px;border-bottom:1px solid #e8e8ee;">
+  <p style="margin:0 0 6px;color:#1a1a2e;font-size:13px;font-weight:600;">Recent News</p>
+  {% for item in insight.zoominfo.news[:5] %}
+  <p style="margin:0 0 6px;font-size:12px;">
+    {% if item.url %}<a href="{{ item.url }}" style="color:#4361ee;text-decoration:none;">{{ item.headline }}</a>{% else %}{{ item.headline }}{% endif %}
+    {% if item.date %}<span style="color:#aaa;"> &mdash; {{ item.date }}</span>{% endif %}
+  </p>
+  {% endfor %}
+</td>
+</tr>
+{% endif %}
+
+{% if insight.web_research_summary %}
+<!-- Web Research -->
+<tr>
+<td style="padding:14px 20px;border-bottom:1px solid #e8e8ee;">
+  <p style="margin:0 0 6px;color:#1a1a2e;font-size:13px;font-weight:600;">Research Summary</p>
+  <p style="margin:0;font-size:12px;color:#444;line-height:1.6;">{{ insight.web_research_summary }}</p>
+</td>
+</tr>
+{% endif %}
+
+{% if insight.talking_points %}
+<!-- Talking Points -->
+<tr>
+<td style="padding:14px 20px;">
+  <p style="margin:0 0 6px;color:#1a1a2e;font-size:13px;font-weight:600;">Talking Points</p>
+  <ul style="margin:0;padding-left:18px;font-size:12px;color:#333;line-height:1.8;">
+    {% for point in insight.talking_points %}
+    <li>{{ point }}</li>
+    {% endfor %}
+  </ul>
+</td>
+</tr>
+{% endif %}
+
+</table>
+</td>
+</tr>
+{% endfor %}
+
+{% if mb.key_themes %}
+<!-- Key Themes -->
+<tr>
+<td style="padding:16px 32px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0f3ff;border-radius:6px;">
+    <tr><td style="padding:14px 20px;">
+      <p style="margin:0 0 8px;color:#1a1a2e;font-size:13px;font-weight:600;">Key Themes</p>
+      <ul style="margin:0;padding-left:18px;font-size:12px;color:#333;line-height:1.8;">
+        {% for theme in mb.key_themes %}
+        <li>{{ theme }}</li>
+        {% endfor %}
+      </ul>
+    </td></tr>
+  </table>
+</td>
+</tr>
+{% endif %}
+
+{% if mb.suggested_questions %}
+<!-- Suggested Questions -->
+<tr>
+<td style="padding:0 32px 24px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#fff8f0;border-radius:6px;">
+    <tr><td style="padding:14px 20px;">
+      <p style="margin:0 0 8px;color:#1a1a2e;font-size:13px;font-weight:600;">Suggested Questions</p>
+      <ol style="margin:0;padding-left:18px;font-size:12px;color:#333;line-height:1.8;">
+        {% for q in mb.suggested_questions %}
+        <li>{{ q }}</li>
+        {% endfor %}
+      </ol>
+    </td></tr>
+  </table>
+</td>
+</tr>
+{% endif %}
+
+{% if not loop.last %}
+<!-- Divider between meetings -->
+<tr><td style="padding:0 32px;"><hr style="border:none;border-top:2px solid #e8e8ee;margin:0;"></td></tr>
+{% endif %}
+
+</table>
+</td>
+</tr>
+{% endfor %}
+
+<!-- Footer -->
+<tr>
+<td style="background-color:#f8f8fc;padding:16px 32px;border-top:1px solid #e8e8ee;">
+  <p style="margin:0;color:#aaa;font-size:11px;text-align:center;">
+    Generated at {{ generated_at }} &bull; Meeting Prep Automation
+  </p>
+</td>
+</tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>
