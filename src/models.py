@@ -40,6 +40,7 @@ class ContactProfile(BaseModel):
     employment_history: list[dict] = Field(default_factory=list)
     education: list[dict] = Field(default_factory=list)
     zoominfo_contact_id: Optional[str] = None
+    company_domain: str = ""   # populated from ZoomInfo contact record
 
 
 class CompanyData(BaseModel):

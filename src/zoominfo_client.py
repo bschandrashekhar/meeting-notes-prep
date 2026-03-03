@@ -117,27 +117,62 @@ class ZoomInfoClient:
 
     # --- Contact endpoints ---
 
+    _CONTACT_OUTPUT_FIELDS = [
+        "id", "fullName", "jobTitle", "phone",
+        "linkedinUrl", "employmentHistory", "education",
+        "companyWebsite",   # used to derive company domain when we have no email
+    ]
+
     def search_contact(self, email: str) -> Optional[ContactProfile]:
         """Search for a contact by email address."""
+        if not email:
+            return None
         try:
             data = self._post(
                 SEARCH_CONTACT_PATH,
                 json={
                     "filter": {"emailAddress": [email]},
-                    "outputFields": [
-                        "id", "fullName", "jobTitle", "phone",
-                        "linkedinUrl", "employmentHistory", "education",
-                    ],
+                    "outputFields": self._CONTACT_OUTPUT_FIELDS,
                     "rpp": 1,
                 },
             )
             contacts = data.get("data", [])
             if not contacts:
-                logger.info("No ZoomInfo contact found for %s", email)
+                logger.info("No ZoomInfo contact found for email %s", email)
                 return None
             return self._parse_contact(contacts[0])
         except Exception as e:
-            logger.warning("Failed to search contact %s: %s", email, e)
+            logger.warning("Failed to search contact by email %s: %s", email, e)
+            return None
+
+    def search_contact_by_name(self, name: str, title: str = "") -> Optional[ContactProfile]:
+        """Search for a contact by full name (and optionally job title).
+
+        Used as a fallback when no email is available (e.g. attendees parsed
+        from the calendar event description).
+        """
+        if not name:
+            return None
+        contact_filter: dict = {"fullName": [name]}
+        if title:
+            contact_filter["jobTitle"] = [title]
+        try:
+            data = self._post(
+                SEARCH_CONTACT_PATH,
+                json={
+                    "filter": contact_filter,
+                    "outputFields": self._CONTACT_OUTPUT_FIELDS,
+                    "rpp": 1,
+                },
+            )
+            contacts = data.get("data", [])
+            if not contacts:
+                logger.info("No ZoomInfo contact found for name '%s'", name)
+                return None
+            logger.info("Found ZoomInfo contact by name: %s", name)
+            return self._parse_contact(contacts[0])
+        except Exception as e:
+            logger.warning("Failed to search contact by name '%s': %s", name, e)
             return None
 
     def enrich_contact(self, contact_id: str) -> Optional[ContactProfile]:
@@ -311,14 +346,33 @@ class ZoomInfoClient:
 
         Fetches contact profile, company data, tech stack, intent signals,
         and news. Each sub-call is wrapped to gracefully degrade on failure.
-        """
-        logger.info("Enriching attendee: %s (%s)", attendee.name, attendee.email)
 
-        contact = self.search_contact(attendee.email)
-        company = self.search_company(attendee.domain)
-        tech_stack = self.get_tech_stack(attendee.domain)
-        intent_signals = self.get_intent_signals(attendee.domain)
-        news = self.get_news(attendee.domain)
+        When the attendee has no email (parsed from calendar description),
+        falls back to name+title search. When the attendee has no domain,
+        derives it from the ZoomInfo contact record's companyWebsite field.
+        """
+        logger.info("Enriching attendee: %s (%s)", attendee.name, attendee.email or "no email")
+
+        # --- Contact lookup ---
+        contact: Optional[ContactProfile] = None
+        if attendee.email:
+            contact = self.search_contact(attendee.email)
+        if not contact:
+            # Fallback: search by name + designation (works for description-parsed attendees)
+            contact = self.search_contact_by_name(attendee.name, attendee.title)
+
+        # --- Resolve company domain ---
+        # Use attendee's own domain (from email) if available; otherwise
+        # fall back to the domain ZoomInfo returned on the contact record.
+        domain = attendee.domain
+        if not domain and contact and contact.company_domain:
+            domain = contact.company_domain
+            logger.info("Using company domain from ZoomInfo contact: %s", domain)
+
+        company = self.search_company(domain) if domain else None
+        tech_stack = self.get_tech_stack(domain) if domain else []
+        intent_signals = self.get_intent_signals(domain) if domain else []
+        news = self.get_news(domain) if domain else []
 
         return ZoomInfoEnrichment(
             contact=contact,
@@ -332,7 +386,13 @@ class ZoomInfoClient:
 
     @staticmethod
     def _parse_contact(raw: dict) -> ContactProfile:
-        location_parts = [raw.get("city", ""), raw.get("state", "")]
+        # Extract company domain from the companyWebsite field
+        company_website = raw.get("companyWebsite", "")
+        company_domain = ""
+        if company_website:
+            # Strip protocol and trailing slashes: "https://acme.com/" -> "acme.com"
+            company_domain = company_website.replace("https://", "").replace("http://", "").rstrip("/").lower()
+
         return ContactProfile(
             full_name=raw.get("fullName", ""),
             title=raw.get("jobTitle", ""),
@@ -341,6 +401,7 @@ class ZoomInfoClient:
             employment_history=raw.get("employmentHistory", []),
             education=raw.get("education", []),
             zoominfo_contact_id=str(raw.get("id", "")),
+            company_domain=company_domain,
         )
 
     @staticmethod
