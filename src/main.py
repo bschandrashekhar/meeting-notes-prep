@@ -63,26 +63,26 @@ def run_prep(target_date: date) -> None:
         logger.warning("ZoomInfo authentication failed: %s. Continuing without enrichment.", e)
         zi_client = None
 
-    # Deduplicate attendees across meetings (same email = same person)
+    # Deduplicate attendees across meetings (same name = same person)
     all_attendees = {}
     for meeting in meetings:
         for att in meeting.attendees:
-            if att.email not in all_attendees:
-                all_attendees[att.email] = att
+            if att.name not in all_attendees:
+                all_attendees[att.name] = att
 
     logger.info("Enriching %d unique attendees...", len(all_attendees))
 
-    enrichments = {}  # email -> ZoomInfoEnrichment
-    for email, attendee in all_attendees.items():
+    enrichments = {}  # name -> ZoomInfoEnrichment
+    for name, attendee in all_attendees.items():
         if zi_client:
             try:
-                enrichments[email] = zi_client.enrich_attendee(attendee)
+                enrichments[name] = zi_client.enrich_attendee(attendee)
                 logger.info("  Enriched: %s", attendee.name)
             except Exception as e:
                 logger.warning("  Failed to enrich %s: %s", attendee.name, e)
-                enrichments[email] = None
+                enrichments[name] = None
         else:
-            enrichments[email] = None
+            enrichments[name] = None
 
     # --- Stage 3: Research with Claude AI (skipped if no API key) ---
     from src.config import ANTHROPIC_API_KEY
@@ -91,19 +91,19 @@ def run_prep(target_date: date) -> None:
         logger.info("Stage 3: Researching attendees with Claude AI...")
         from src.research import research_attendee, synthesize_meeting_brief
 
-        insights_by_email = {}
-        for email, attendee in all_attendees.items():
-            zoominfo = enrichments.get(email)
+        insights_by_name = {}
+        for name, attendee in all_attendees.items():
+            zoominfo = enrichments.get(name)
             insight = research_attendee(attendee, zoominfo)
-            insights_by_email[email] = insight
+            insights_by_name[name] = insight
             logger.info("  Researched: %s", attendee.name)
 
         meeting_briefs = []
         for meeting in meetings:
             attendee_insights = [
-                insights_by_email[att.email]
+                insights_by_name[att.name]
                 for att in meeting.attendees
-                if att.email in insights_by_email
+                if att.name in insights_by_name
             ]
             brief = synthesize_meeting_brief(meeting, attendee_insights)
             meeting_briefs.append(brief)
@@ -113,20 +113,20 @@ def run_prep(target_date: date) -> None:
         logger.info("Stage 3: Skipping Claude AI research (ANTHROPIC_API_KEY not set)...")
 
         # Build basic insights from ZoomInfo data only
-        insights_by_email = {
-            email: AttendeeInsight(
+        insights_by_name = {
+            name: AttendeeInsight(
                 attendee=attendee,
-                zoominfo=enrichments.get(email),
+                zoominfo=enrichments.get(name),
             )
-            for email, attendee in all_attendees.items()
+            for name, attendee in all_attendees.items()
         }
 
         meeting_briefs = []
         for meeting in meetings:
             attendee_insights = [
-                insights_by_email[att.email]
+                insights_by_name[att.name]
                 for att in meeting.attendees
-                if att.email in insights_by_email
+                if att.name in insights_by_name
             ]
             meeting_briefs.append(MeetingBrief(
                 meeting=meeting,

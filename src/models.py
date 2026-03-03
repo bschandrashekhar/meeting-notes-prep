@@ -8,7 +8,8 @@ from pydantic import BaseModel, Field
 
 class Attendee(BaseModel):
     name: str
-    email: str
+    email: str = ""
+    title: str = ""   # designation / job title from calendar description
     domain: str = ""
     is_organizer: bool = False
 

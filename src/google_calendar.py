@@ -1,4 +1,5 @@
 import logging
+import re
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -14,8 +15,8 @@ logger = logging.getLogger(__name__)
 
 IST = ZoneInfo("Asia/Kolkata")
 
-# Email to exclude from attendees (the user's own email)
-OWN_EMAIL_DOMAIN = "mindruby.com"
+# The Google Calendar to read meetings from
+CALENDAR_NAME = "mindruby-cloudchillies-meetings"
 
 
 def authenticate() -> Credentials:
@@ -47,10 +48,49 @@ def authenticate() -> Credentials:
     return creds
 
 
+def _get_calendar_id(service, name: str) -> str:
+    """Find a calendar's ID by its display name. Falls back to 'primary' if not found."""
+    result = service.calendarList().list().execute()
+    for cal in result.get("items", []):
+        if cal.get("summary", "").strip().lower() == name.strip().lower():
+            logger.info("Found calendar '%s' with id: %s", name, cal["id"])
+            return cal["id"]
+    logger.warning("Calendar '%s' not found — falling back to primary", name)
+    return "primary"
+
+
+def _parse_attendees_from_description(description: str) -> list[Attendee]:
+    """Parse attendees from event description.
+
+    Expected format — one attendee per line, bulleted:
+        • Name - Designation
+        - Name - Designation
+        * Name - Designation
+    """
+    attendees = []
+    for line in description.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        # Strip common bullet characters (•, -, *, –)
+        line = re.sub(r'^[•\-\*–]\s*', '', line).strip()
+        if not line:
+            continue
+        # Split on first " - " to separate name from designation
+        parts = re.split(r'\s*-\s*', line, maxsplit=1)
+        name = parts[0].strip()
+        title = parts[1].strip() if len(parts) > 1 else ""
+        if name:
+            attendees.append(Attendee(name=name, title=title))
+    return attendees
+
+
 def get_meetings_for_date(target_date: datetime) -> list[Meeting]:
     """Fetch all meetings for a given date from Google Calendar."""
     creds = authenticate()
     service = build("calendar", "v3", credentials=creds)
+
+    calendar_id = _get_calendar_id(service, CALENDAR_NAME)
 
     # Build time range for the target date in IST (midnight to midnight IST)
     start_ist = datetime(target_date.year, target_date.month, target_date.day,
@@ -59,12 +99,13 @@ def get_meetings_for_date(target_date: datetime) -> list[Meeting]:
     time_min = start_ist.isoformat()
     time_max = end_ist.isoformat()
 
-    logger.info("Fetching meetings for %s", target_date.strftime("%Y-%m-%d"))
+    logger.info("Fetching meetings for %s from calendar '%s'",
+                target_date.strftime("%Y-%m-%d"), CALENDAR_NAME)
 
     events_result = (
         service.events()
         .list(
-            calendarId="primary",
+            calendarId=calendar_id,
             timeMin=time_min,
             timeMax=time_max,
             singleEvents=True,
@@ -94,35 +135,9 @@ def _parse_event(event: dict) -> Meeting | None:
     if "dateTime" not in start:
         return None
 
-    # Extract attendees
-    raw_attendees = event.get("attendees", [])
-    attendees = []
-    for att in raw_attendees:
-        # Skip declined attendees
-        if att.get("responseStatus") == "declined":
-            continue
-
-        email = att.get("email", "")
-
-        # Skip the user's own email
-        if email.endswith(f"@{OWN_EMAIL_DOMAIN}"):
-            continue
-
-        # Skip resource rooms
-        if att.get("resource", False):
-            continue
-
-        name = att.get("displayName", "")
-        if not name:
-            name = _name_from_email(email)
-
-        attendees.append(
-            Attendee(
-                name=name,
-                email=email,
-                is_organizer=att.get("organizer", False),
-            )
-        )
+    # Parse attendees from the description field (bullet list: Name - Designation)
+    description = event.get("description", "")
+    attendees = _parse_attendees_from_description(description)
 
     # Extract Google Meet link
     meet_link = ""
@@ -144,9 +159,3 @@ def _parse_event(event: dict) -> Meeting | None:
     )
 
 
-def _name_from_email(email: str) -> str:
-    """Derive a display name from an email address."""
-    local_part = email.split("@")[0]
-    # Handle common patterns: first.last, first_last, firstlast
-    parts = local_part.replace("_", ".").replace("-", ".").split(".")
-    return " ".join(part.capitalize() for part in parts)
