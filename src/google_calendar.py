@@ -18,6 +18,9 @@ IST = ZoneInfo("Asia/Kolkata")
 # The Google Calendar to read meetings from
 CALENDAR_NAME = "mindruby-cloudchillies-meetings"
 
+# Domains to exclude from the invite-list fallback (internal teams)
+SKIP_DOMAINS = {"mindruby.com", "cloudchillies.com"}
+
 
 def authenticate() -> Credentials:
     """Authenticate with Google OAuth2, reusing cached token when possible."""
@@ -85,6 +88,35 @@ def _parse_attendees_from_description(description: str) -> list[Attendee]:
     return attendees
 
 
+def _name_from_email(email: str) -> str:
+    """Derive a display name from an email address local part."""
+    local_part = email.split("@")[0]
+    parts = local_part.replace("_", ".").replace("-", ".").split(".")
+    return " ".join(part.capitalize() for part in parts)
+
+
+def _parse_attendees_from_invite_list(raw_attendees: list[dict]) -> list[Attendee]:
+    """Fallback: parse attendees from the event invite list.
+
+    Skips internal domains (mindruby.com, cloudchillies.com), declined
+    attendees, and calendar resource rooms. Name is derived from the email
+    local part; title is left empty for ZoomInfo to fill in later.
+    """
+    attendees = []
+    for att in raw_attendees:
+        if att.get("responseStatus") == "declined":
+            continue
+        if att.get("resource", False):
+            continue
+        email = att.get("email", "")
+        domain = email.split("@")[-1].lower() if "@" in email else ""
+        if domain in SKIP_DOMAINS:
+            continue
+        name = att.get("displayName", "") or _name_from_email(email)
+        attendees.append(Attendee(name=name, email=email))
+    return attendees
+
+
 def get_meetings_for_date(target_date: datetime) -> list[Meeting]:
     """Fetch all meetings for a given date from Google Calendar."""
     creds = authenticate()
@@ -135,9 +167,15 @@ def _parse_event(event: dict) -> Meeting | None:
     if "dateTime" not in start:
         return None
 
-    # Parse attendees from the description field (bullet list: Name - Designation)
+    # Primary: parse attendees from description (bullet list: Name - Designation)
     description = event.get("description", "")
     attendees = _parse_attendees_from_description(description)
+
+    # Fallback: use the invite distribution list if description had no attendees
+    if not attendees:
+        logger.debug("No attendees in description for '%s' — falling back to invite list",
+                     event.get("summary", ""))
+        attendees = _parse_attendees_from_invite_list(event.get("attendees", []))
 
     # Extract Google Meet link
     meet_link = ""
