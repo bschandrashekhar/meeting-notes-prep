@@ -159,6 +159,18 @@ def get_meetings_for_date(target_date: datetime) -> list[Meeting]:
     return meetings
 
 
+def _extract_external_domain(raw_attendees: list[dict]) -> str:
+    """Return the first external (non-internal) email domain from the invite list."""
+    for att in raw_attendees:
+        email = att.get("email", "")
+        if not email or att.get("resource", False):
+            continue
+        domain = email.split("@")[-1].lower()
+        if domain not in SKIP_DOMAINS:
+            return domain
+    return ""
+
+
 def _parse_event(event: dict) -> Meeting | None:
     """Parse a Google Calendar event into a Meeting model."""
     # Skip all-day events (no dateTime field)
@@ -167,15 +179,27 @@ def _parse_event(event: dict) -> Meeting | None:
     if "dateTime" not in start:
         return None
 
+    raw_invite_list = event.get("attendees", [])
+
     # Primary: parse attendees from description (bullet list: Name - Designation)
     description = event.get("description", "")
     attendees = _parse_attendees_from_description(description)
 
-    # Fallback: use the invite distribution list if description had no attendees
-    if not attendees:
+    if attendees:
+        # Description attendees have no email/domain. Infer the company domain
+        # from the external email addresses the invite was sent to.
+        external_domain = _extract_external_domain(raw_invite_list)
+        if external_domain:
+            logger.info("Inferred company domain '%s' from invite list for description attendees",
+                        external_domain)
+            for att in attendees:
+                if not att.domain:
+                    att.domain = external_domain
+    else:
+        # Fallback: use the invite distribution list if description had no attendees
         logger.debug("No attendees in description for '%s' — falling back to invite list",
                      event.get("summary", ""))
-        attendees = _parse_attendees_from_invite_list(event.get("attendees", []))
+        attendees = _parse_attendees_from_invite_list(raw_invite_list)
 
     # Extract Google Meet link
     meet_link = ""
