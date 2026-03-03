@@ -145,35 +145,41 @@ class ZoomInfoClient:
             logger.warning("Failed to search contact by email %s: %s", email, e)
             return None
 
-    def search_contact_by_name(self, name: str, title: str = "") -> Optional[ContactProfile]:
-        """Search for a contact by full name (and optionally job title).
+    def search_contact_by_name(
+        self, name: str, title: str = "", domain: str = ""
+    ) -> list[ContactProfile]:
+        """Search for a contact by full name, optionally filtered by job title and company domain.
 
-        Used as a fallback when no email is available (e.g. attendees parsed
-        from the calendar event description).
+        Returns up to 3 candidates. When domain is supplied the search is
+        scoped to that company, reducing false matches (e.g. two Johns at
+        different firms). Multiple results mean the caller should treat the
+        enrichment as tentative and present all candidates to the user.
         """
         if not name:
-            return None
+            return []
         contact_filter: dict = {"fullName": [name]}
         if title:
             contact_filter["jobTitle"] = [title]
+        if domain:
+            contact_filter["companyWebsite"] = [domain]
         try:
             data = self._post(
                 SEARCH_CONTACT_PATH,
                 json={
                     "filter": contact_filter,
                     "outputFields": self._CONTACT_OUTPUT_FIELDS,
-                    "rpp": 1,
+                    "rpp": 3,
                 },
             )
             contacts = data.get("data", [])
             if not contacts:
                 logger.info("No ZoomInfo contact found for name '%s'", name)
-                return None
-            logger.info("Found ZoomInfo contact by name: %s", name)
-            return self._parse_contact(contacts[0])
+                return []
+            logger.info("Found %d ZoomInfo candidate(s) for name '%s'", len(contacts), name)
+            return [self._parse_contact(c) for c in contacts]
         except Exception as e:
             logger.warning("Failed to search contact by name '%s': %s", name, e)
-            return None
+            return []
 
     def enrich_contact(self, contact_id: str) -> Optional[ContactProfile]:
         """Enrich a contact by ZoomInfo contact ID."""
@@ -355,15 +361,32 @@ class ZoomInfoClient:
 
         # --- Contact lookup ---
         contact: Optional[ContactProfile] = None
+        contact_candidates: list[ContactProfile] = []
+        is_tentative = False
+
         if attendee.email:
             contact = self.search_contact(attendee.email)
+
         if not contact:
-            # Fallback: search by name + designation (works for description-parsed attendees)
-            contact = self.search_contact_by_name(attendee.name, attendee.title)
+            # Fallback: name + title + domain (domain scopes search to this company)
+            candidates = self.search_contact_by_name(
+                attendee.name, attendee.title, attendee.domain
+            )
+            if len(candidates) == 1:
+                contact = candidates[0]
+            elif len(candidates) > 1:
+                # Multiple people share this name at the same company —
+                # use the first result but flag as tentative so the email
+                # clearly shows all candidates for human review.
+                contact = candidates[0]
+                contact_candidates = candidates
+                is_tentative = True
+                logger.warning(
+                    "Multiple ZoomInfo matches for '%s' — marking enrichment as tentative",
+                    attendee.name,
+                )
 
         # --- Resolve company domain ---
-        # Use attendee's own domain (from email) if available; otherwise
-        # fall back to the domain ZoomInfo returned on the contact record.
         domain = attendee.domain
         if not domain and contact and contact.company_domain:
             domain = contact.company_domain
@@ -380,6 +403,8 @@ class ZoomInfoClient:
             tech_stack=tech_stack,
             intent_signals=intent_signals,
             news=news,
+            is_tentative=is_tentative,
+            contact_candidates=contact_candidates,
         )
 
     # --- Parsers ---

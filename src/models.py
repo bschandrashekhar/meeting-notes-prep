@@ -81,6 +81,9 @@ class ZoomInfoEnrichment(BaseModel):
     tech_stack: list[TechStack] = Field(default_factory=list)
     intent_signals: list[IntentSignal] = Field(default_factory=list)
     news: list[NewsItem] = Field(default_factory=list)
+    # Set when a name search returns multiple matches — all candidates are listed
+    is_tentative: bool = False
+    contact_candidates: list[ContactProfile] = Field(default_factory=list)
 
 
 # --- Brief models ---

@@ -50,15 +50,37 @@
 <tr>
 <td style="background-color:#f8f8fc;padding:14px 20px;border-bottom:1px solid #e8e8ee;">
   <h3 style="margin:0;color:#1a1a2e;font-size:15px;">{{ insight.attendee.name }}</h3>
-  {% if insight.zoominfo and insight.zoominfo.contact and insight.zoominfo.contact.title %}
-  <p style="margin:3px 0 0;color:#555;font-size:13px;">{{ insight.zoominfo.contact.title }}</p>
-  {% endif %}
-  <p style="margin:3px 0 0;color:#888;font-size:12px;">{{ insight.attendee.email }}</p>
+  {% set shown_title = (insight.zoominfo.contact.title if insight.zoominfo and insight.zoominfo.contact and insight.zoominfo.contact.title else insight.attendee.title) %}
+  {% if shown_title %}<p style="margin:3px 0 0;color:#555;font-size:13px;">{{ shown_title }}</p>{% endif %}
+  {% if insight.attendee.email %}<p style="margin:3px 0 0;color:#888;font-size:12px;">{{ insight.attendee.email }}</p>{% endif %}
   {% if insight.zoominfo and insight.zoominfo.contact and insight.zoominfo.contact.linkedin_url %}
   <a href="{{ insight.zoominfo.contact.linkedin_url }}" style="color:#4361ee;font-size:12px;text-decoration:none;">LinkedIn Profile</a>
   {% endif %}
 </td>
 </tr>
+
+{% if insight.zoominfo and insight.zoominfo.is_tentative %}
+<!-- Tentative Warning + All Candidates -->
+<tr>
+<td style="padding:12px 20px;background-color:#fff8e1;border-bottom:1px solid #ffe082;">
+  <p style="margin:0 0 8px;font-size:12px;color:#7a5c00;font-weight:600;">
+    &#9888; Multiple ZoomInfo matches found &mdash; please confirm which profile applies.
+  </p>
+  {% for cand in insight.zoominfo.contact_candidates %}
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:8px;border:1px solid #ffe082;border-radius:4px;background-color:#fffdf0;">
+    <tr><td style="padding:8px 12px;">
+      <p style="margin:0;font-size:12px;font-weight:600;color:#333;">{{ loop.index }}. {{ cand.full_name }}</p>
+      {% if cand.title %}<p style="margin:2px 0 0;font-size:11px;color:#555;">{{ cand.title }}</p>{% endif %}
+      {% if cand.company_domain %}<p style="margin:2px 0 0;font-size:11px;color:#888;">{{ cand.company_domain }}</p>{% endif %}
+      {% if cand.phone %}<p style="margin:2px 0 0;font-size:11px;color:#888;">{{ cand.phone }}</p>{% endif %}
+      {% if cand.linkedin_url %}<a href="{{ cand.linkedin_url }}" style="font-size:11px;color:#4361ee;text-decoration:none;">LinkedIn</a>{% endif %}
+    </td></tr>
+  </table>
+  {% endfor %}
+  <p style="margin:0;font-size:11px;color:#999;">Details below are based on the first match. Company intel shown is for the shared domain.</p>
+</td>
+</tr>
+{% endif %}
 
 {% if insight.zoominfo and insight.zoominfo.company %}
 {% set co = insight.zoominfo.company %}
