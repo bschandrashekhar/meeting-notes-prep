@@ -83,29 +83,55 @@ def run_prep(target_date: date) -> None:
         else:
             enrichments[email] = None
 
-    # --- Stage 3: Research with Claude AI ---
-    logger.info("Stage 3: Researching attendees with Claude AI...")
-    from src.research import research_attendee, synthesize_meeting_brief
+    # --- Stage 3: Research with Claude AI (skipped if no API key) ---
+    from src.config import ANTHROPIC_API_KEY
 
-    # Research each unique attendee
-    insights_by_email = {}  # email -> AttendeeInsight
-    for email, attendee in all_attendees.items():
-        zoominfo = enrichments.get(email)
-        insight = research_attendee(attendee, zoominfo)
-        insights_by_email[email] = insight
-        logger.info("  Researched: %s", attendee.name)
+    if ANTHROPIC_API_KEY:
+        logger.info("Stage 3: Researching attendees with Claude AI...")
+        from src.research import research_attendee, synthesize_meeting_brief
 
-    # Synthesize meeting briefs
-    meeting_briefs = []
-    for meeting in meetings:
-        attendee_insights = [
-            insights_by_email[att.email]
-            for att in meeting.attendees
-            if att.email in insights_by_email
-        ]
-        brief = synthesize_meeting_brief(meeting, attendee_insights)
-        meeting_briefs.append(brief)
-        logger.info("  Synthesized brief for: %s", meeting.title)
+        insights_by_email = {}
+        for email, attendee in all_attendees.items():
+            zoominfo = enrichments.get(email)
+            insight = research_attendee(attendee, zoominfo)
+            insights_by_email[email] = insight
+            logger.info("  Researched: %s", attendee.name)
+
+        meeting_briefs = []
+        for meeting in meetings:
+            attendee_insights = [
+                insights_by_email[att.email]
+                for att in meeting.attendees
+                if att.email in insights_by_email
+            ]
+            brief = synthesize_meeting_brief(meeting, attendee_insights)
+            meeting_briefs.append(brief)
+            logger.info("  Synthesized brief for: %s", meeting.title)
+
+    else:
+        logger.info("Stage 3: Skipping Claude AI research (ANTHROPIC_API_KEY not set)...")
+
+        # Build basic insights from ZoomInfo data only
+        insights_by_email = {
+            email: AttendeeInsight(
+                attendee=attendee,
+                zoominfo=enrichments.get(email),
+            )
+            for email, attendee in all_attendees.items()
+        }
+
+        meeting_briefs = []
+        for meeting in meetings:
+            attendee_insights = [
+                insights_by_email[att.email]
+                for att in meeting.attendees
+                if att.email in insights_by_email
+            ]
+            meeting_briefs.append(MeetingBrief(
+                meeting=meeting,
+                attendee_insights=attendee_insights,
+            ))
+            logger.info("  Built basic brief for: %s", meeting.title)
 
     daily_brief = DailyBrief(
         target_date=target_date,
