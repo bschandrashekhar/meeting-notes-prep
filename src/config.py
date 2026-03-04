@@ -39,7 +39,7 @@ if _token_json and not GOOGLE_TOKEN_FILE.exists():
 ZOOMINFO_BASE_URL = "https://api.zoominfo.com"
 
 # --- Perplexity AI ---
-PERPLEXITY_MODEL = "sonar-pro"
+PERPLEXITY_MODEL = "sonar-reasoning-pro"
 PERPLEXITY_BASE_URL = "https://api.perplexity.ai"
 
 # --- Paths ---
