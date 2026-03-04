@@ -2,20 +2,11 @@ name: Meeting Prep Brief
 
 on:
   # -------------------------------------------------------
-  # Runs every day at 7 PM US Eastern Time.
-  # GitHub Actions uses UTC, so:
-  #   7 PM EST (UTC-5) = 00:00 UTC  → cron: '0 0 * * *'
-  #   7 PM EDT (UTC-4) = 23:00 UTC  → cron: '0 23 * * *'
-  #
-  # Change the cron line below to match your timezone:
-  #   US Eastern (most of year): '0 0 * * *'
-  #   US Central:                '0 1 * * *'
-  #   US Mountain:               '0 2 * * *'
-  #   US Pacific:                '0 3 * * *'
-  #   India (IST):               '30 13 * * *'
+  # Runs every day at 7:00 AM IST (1:30 AM UTC)
+  # GitHub Actions cron uses UTC.
   # -------------------------------------------------------
   schedule:
-    - cron: '30 13 * * *'
+    - cron: '30 1 * * *'
 
   # Also allows you to trigger it manually from the GitHub UI
   # (useful for testing without waiting for the schedule)
