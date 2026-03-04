@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 from typing import Optional
 
 import requests
@@ -238,8 +239,11 @@ def synthesize_meeting_brief(
 
 
 def _parse_json_response(text: str) -> dict:
-    """Parse JSON from the response, handling markdown code blocks."""
+    """Parse JSON from the response, handling markdown code blocks and reasoning tags."""
     text = text.strip()
+
+    # Strip <think>...</think> tags from reasoning models (sonar-reasoning-pro)
+    text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL).strip()
 
     # Try to extract JSON from markdown code block
     if "```json" in text:

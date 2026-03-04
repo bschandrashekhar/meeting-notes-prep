@@ -79,8 +79,8 @@ def _parse_attendees_from_description(description: str) -> list[Attendee]:
         line = line.strip()
         if not line:
             continue
-        # Strip common bullet characters (•, -, *, –)
-        line = re.sub(r'^[•\-\*–]\s*', '', line).strip()
+        # Strip common bullet characters (•, -, *, –) and numbered prefixes (1., 2.)
+        line = re.sub(r'^(?:\d+[.)]\s*|[•\-\*–]\s*)', '', line).strip()
         if not line:
             continue
         # Split on first " - " to separate name from designation
