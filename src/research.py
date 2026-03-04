@@ -52,11 +52,14 @@ def _chat(system: str, user: str, model: str = PERPLEXITY_MODEL) -> tuple[str, l
 def research_attendee(
     attendee: Attendee,
     zoominfo: Optional[ZoomInfoEnrichment],
+    meeting_title: str = "",
 ) -> AttendeeInsight:
     """Research an attendee using Perplexity Sonar (web search built-in)."""
 
     # Build context from ZoomInfo data
     context_parts = [f"Attendee: {attendee.name}"]
+    if meeting_title:
+        context_parts.append(f"Meeting: {meeting_title}")
     if attendee.email:
         context_parts.append(f"Email: {attendee.email}")
     if attendee.domain:

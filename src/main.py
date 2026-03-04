@@ -96,20 +96,15 @@ def run_prep(target_date: date) -> None:
         from src.research import research_attendee, synthesize_meeting_brief
 
         try:
-            insights_by_name = {}
-            for name, attendee in all_attendees.items():
-                zoominfo = enrichments.get(name)
-                insight = research_attendee(attendee, zoominfo)
-                insights_by_name[name] = insight
-                logger.info("  Researched: %s", attendee.name)
-
             meeting_briefs = []
             for meeting in meetings:
-                attendee_insights = [
-                    insights_by_name[att.name]
-                    for att in meeting.attendees
-                    if att.name in insights_by_name
-                ]
+                attendee_insights = []
+                for att in meeting.attendees:
+                    zoominfo = enrichments.get(att.name)
+                    insight = research_attendee(att, zoominfo, meeting_title=meeting.title)
+                    attendee_insights.append(insight)
+                    logger.info("  Researched: %s (for %s)", att.name, meeting.title)
+
                 brief = synthesize_meeting_brief(meeting, attendee_insights)
                 meeting_briefs.append(brief)
                 logger.info("  Synthesized brief for: %s", meeting.title)
