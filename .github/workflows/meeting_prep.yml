@@ -59,20 +59,7 @@ jobs:
       - name: Create logs directory
         run: mkdir -p logs
 
-      # 7. Test ZoomInfo authentication (temporary — remove after verified)
-      - name: Test ZoomInfo auth
-        env:
-          ZOOMINFO_USERNAME: ${{ secrets.ZOOMINFO_USERNAME }}
-          ZOOMINFO_PASSWORD: ${{ secrets.ZOOMINFO_PASSWORD }}
-        run: |
-          python -c "
-          from src.zoominfo_client import ZoomInfoClient
-          client = ZoomInfoClient()
-          client.authenticate()
-          print('ZoomInfo authentication successful!')
-          "
-
-      # 8. Run the meeting prep pipeline
+      # 7. Run the meeting prep pipeline
       #    By default, main.py preps for tomorrow's meetings (date_of_meeting = today + 1 day)
       - name: Run meeting prep
         env:

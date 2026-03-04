@@ -8,7 +8,7 @@ from jinja2 import Environment, FileSystemLoader
 
 from src.config import GOOGLE_TOKEN_FILE, GOOGLE_SCOPES, TEMPLATES_DIR, TARGET_EMAIL
 from src.google_calendar import authenticate
-from src.models import DailyBrief
+from src.models import DailyBrief, MeetingBrief
 
 logger = logging.getLogger(__name__)
 
@@ -69,14 +69,47 @@ def send_email(
         return False
 
 
-def send_daily_brief(daily_brief: DailyBrief) -> bool:
-    """Render and send the daily brief email."""
-    meeting_count = len(daily_brief.meeting_briefs)
+def render_meeting_email(meeting_brief: MeetingBrief, target_date) -> str:
+    """Render a single meeting brief into an HTML email."""
+    env = Environment(
+        loader=FileSystemLoader(str(TEMPLATES_DIR)),
+        autoescape=True,
+    )
+    template = env.get_template("email_brief.html")
+
+    # Wrap in a DailyBrief-like structure so the template works unchanged
+    return template.render(
+        brief=type("Brief", (), {"meeting_briefs": [meeting_brief]})(),
+        meeting_count=1,
+        target_date=target_date.strftime("%A, %B %d, %Y"),
+        generated_at=__import__("datetime").datetime.now().strftime("%I:%M %p on %B %d, %Y"),
+    )
+
+
+def send_meeting_briefs(daily_brief: DailyBrief) -> int:
+    """Send one email per meeting. Returns the number of emails sent successfully."""
     date_str = daily_brief.target_date.strftime("%B %d, %Y")
-    subject = f"Meeting Prep Brief — {date_str} ({meeting_count} meeting{'s' if meeting_count != 1 else ''})"
+    sent = 0
 
-    logger.info("Rendering email for %s", date_str)
-    html_content = render_email(daily_brief)
+    for mb in daily_brief.meeting_briefs:
+        subject = f"Meeting Prep: {mb.meeting.title} — {date_str}"
 
-    logger.info("Sending email: %s", subject)
-    return send_email(html_content, subject)
+        logger.info("Rendering email for meeting: %s", mb.meeting.title)
+        html_content = render_meeting_email(mb, daily_brief.target_date)
+
+        logger.info("Sending email: %s", subject)
+        if send_email(html_content, subject):
+            sent += 1
+
+    return sent
+
+
+def send_daily_brief(daily_brief: DailyBrief) -> bool:
+    """Render and send one email per meeting brief.
+
+    Returns True if all emails were sent successfully.
+    """
+    total = len(daily_brief.meeting_briefs)
+    sent = send_meeting_briefs(daily_brief)
+    logger.info("Sent %d/%d meeting prep emails", sent, total)
+    return sent == total
