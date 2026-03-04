@@ -3,9 +3,9 @@ import logging
 import re
 from typing import Optional
 
-import requests
+import anthropic
 
-from src.config import PERPLEXITY_API_KEY, PERPLEXITY_MODEL, PERPLEXITY_BASE_URL
+from src.config import ANTHROPIC_API_KEY, ANTHROPIC_MODEL
 from src.models import (
     AttendeeInsight,
     Meeting,
@@ -16,38 +16,49 @@ from src.models import (
 
 logger = logging.getLogger(__name__)
 
-CHAT_URL = f"{PERPLEXITY_BASE_URL}/chat/completions"
+client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
 
-def _headers() -> dict:
-    return {
-        "Authorization": f"Bearer {PERPLEXITY_API_KEY}",
-        "Content-Type": "application/json",
-    }
+def _chat(system: str, user: str, model: str = ANTHROPIC_MODEL) -> tuple[str, list[str]]:
+    """Call Anthropic API with web search tool.
 
-
-def _chat(system: str, user: str, model: str = PERPLEXITY_MODEL) -> tuple[str, list[str]]:
-    """Call Perplexity chat completions API.
-
-    Returns (response_text, citations).
-    Raises requests.HTTPError on auth or other failures.
+    Returns (response_text, source_urls).
+    Raises anthropic.AuthenticationError on auth failures.
     """
-    payload = {
-        "model": model,
-        "messages": [
-            {"role": "system", "content": system},
-            {"role": "user", "content": user},
-        ],
-        "search_recency_filter": "month",
-    }
+    response = client.messages.create(
+        model=model,
+        max_tokens=4096,
+        system=system,
+        tools=[{"type": "web_search_20250305", "name": "web_search", "max_uses": 5}],
+        messages=[{"role": "user", "content": user}],
+    )
 
-    resp = requests.post(CHAT_URL, json=payload, headers=_headers(), timeout=60)
-    resp.raise_for_status()
+    text_parts = []
+    source_urls = []
 
-    data = resp.json()
-    text = data["choices"][0]["message"]["content"]
-    citations = data.get("citations", [])
-    return text, citations
+    for block in response.content:
+        if getattr(block, "type", "") == "text":
+            text_parts.append(block.text)
+            # Extract citation URLs from text block annotations
+            for citation in getattr(block, "citations", None) or []:
+                url = getattr(citation, "url", "")
+                if url:
+                    source_urls.append(url)
+        elif getattr(block, "type", "") == "web_search_tool_result":
+            for result in getattr(block, "search_results", []):
+                url = getattr(result, "url", "")
+                if url:
+                    source_urls.append(url)
+
+    # Deduplicate while preserving order
+    seen = set()
+    unique_urls = []
+    for url in source_urls:
+        if url not in seen:
+            seen.add(url)
+            unique_urls.append(url)
+
+    return "\n".join(text_parts), unique_urls
 
 
 def research_attendee(
@@ -55,7 +66,7 @@ def research_attendee(
     zoominfo: Optional[ZoomInfoEnrichment],
     meeting_title: str = "",
 ) -> AttendeeInsight:
-    """Research an attendee using Perplexity Sonar (web search built-in)."""
+    """Research an attendee using Claude with web search."""
 
     # Build context from ZoomInfo data
     context_parts = [f"Attendee: {attendee.name}"]
@@ -111,7 +122,7 @@ def research_attendee(
 
     system_prompt = (
         "You are a meeting preparation research assistant. "
-        "Research the attendee and their company to help prepare for an upcoming meeting.\n\n"
+        "Use web search to research the attendee and their company to help prepare for an upcoming meeting.\n\n"
         "Search for:\n"
         "1. The person's current role, background, and recent public activity\n"
         "2. Their company's latest news, funding, product launches (last 3 months)\n"
@@ -144,7 +155,7 @@ def research_attendee(
         # Append citation URLs to the research summary
         summary = parsed.get("web_research_summary", result_text)
         if citations:
-            source_list = "\n".join(f"- {url}" for url in citations[:5])
+            source_list = "\n".join(f"- {url}" for url in citations[:10])
             summary += f"\n\nSources:\n{source_list}"
 
         return AttendeeInsight(
@@ -155,16 +166,8 @@ def research_attendee(
             research_prompt=full_prompt,
         )
 
-    except requests.exceptions.HTTPError as e:
-        if e.response is not None and e.response.status_code in (401, 403):
-            raise  # propagate auth errors so main.py can fall back
-        logger.error("Research failed for %s: %s", attendee.name, e)
-        return AttendeeInsight(
-            attendee=attendee,
-            zoominfo=zoominfo,
-            web_research_summary=f"Research unavailable: {e}",
-            talking_points=[],
-        )
+    except anthropic.AuthenticationError:
+        raise  # propagate auth errors so main.py can fall back
     except Exception as e:
         logger.error("Research failed for %s: %s", attendee.name, e)
         return AttendeeInsight(
@@ -239,11 +242,8 @@ def synthesize_meeting_brief(
 
 
 def _parse_json_response(text: str) -> dict:
-    """Parse JSON from the response, handling markdown code blocks and reasoning tags."""
+    """Parse JSON from the response, handling markdown code blocks."""
     text = text.strip()
-
-    # Strip <think>...</think> tags from reasoning models (sonar-reasoning-pro)
-    text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL).strip()
 
     # Try to extract JSON from markdown code block
     if "```json" in text:
