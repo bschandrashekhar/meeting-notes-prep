@@ -50,9 +50,11 @@ def run_prep(target_date: date) -> None:
 
     logger.info("Found %d meetings with external attendees", len(meetings))
     for m in meetings:
-        attendee_names = ", ".join(a.name for a in m.attendees)
+        attendee_info = ", ".join(
+            f"{a.name} ({a.title})" if a.title else a.name for a in m.attendees
+        )
         logger.info("  - %s (%s) — Attendees: %s", m.title,
-                     m.start_time.strftime("%I:%M %p"), attendee_names)
+                     m.start_time.strftime("%I:%M %p"), attendee_info)
 
     # --- Stage 2: Enrich attendees via ZoomInfo ---
     logger.info("Stage 2: Enriching attendees via ZoomInfo...")
