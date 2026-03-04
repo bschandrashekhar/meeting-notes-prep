@@ -10,7 +10,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 load_dotenv(PROJECT_ROOT / ".env")
 
 # --- API Keys ---
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+PERPLEXITY_API_KEY = os.getenv("PERPLEXITY_API_KEY", "")
 ZOOMINFO_USERNAME = os.getenv("ZOOMINFO_USERNAME", "")
 ZOOMINFO_PASSWORD = os.getenv("ZOOMINFO_PASSWORD", "")
 
@@ -38,8 +38,9 @@ if _token_json and not GOOGLE_TOKEN_FILE.exists():
 # --- ZoomInfo ---
 ZOOMINFO_BASE_URL = "https://api.zoominfo.com"
 
-# --- Claude AI ---
-CLAUDE_MODEL = "claude-sonnet-4-6"
+# --- Perplexity AI ---
+PERPLEXITY_MODEL = "sonar-pro"
+PERPLEXITY_BASE_URL = "https://api.perplexity.ai"
 
 # --- Paths ---
 TEMPLATES_DIR = PROJECT_ROOT / "templates"
