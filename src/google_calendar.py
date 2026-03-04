@@ -54,9 +54,13 @@ def authenticate() -> Credentials:
 def _get_calendar_id(service, name: str) -> str:
     """Find a calendar's ID by its display name. Falls back to 'primary' if not found."""
     result = service.calendarList().list().execute()
-    for cal in result.get("items", []):
+    calendars = result.get("items", [])
+    logger.info("Available calendars (%d):", len(calendars))
+    for cal in calendars:
+        logger.info("  - '%s' (id: %s)", cal.get("summary", "?"), cal["id"])
+    for cal in calendars:
         if cal.get("summary", "").strip().lower() == name.strip().lower():
-            logger.info("Found calendar '%s' with id: %s", name, cal["id"])
+            logger.info("Using calendar '%s' with id: %s", name, cal["id"])
             return cal["id"]
     logger.warning("Calendar '%s' not found — falling back to primary", name)
     return "primary"
@@ -133,6 +137,7 @@ def get_meetings_for_date(target_date: datetime) -> list[Meeting]:
 
     logger.info("Fetching meetings for %s from calendar '%s'",
                 target_date.strftime("%Y-%m-%d"), CALENDAR_NAME)
+    logger.info("Time range: %s to %s", time_min, time_max)
 
     events_result = (
         service.events()
@@ -147,13 +152,43 @@ def get_meetings_for_date(target_date: datetime) -> list[Meeting]:
     )
 
     events = events_result.get("items", [])
-    logger.info("Found %d events", len(events))
+    logger.info("Found %d events on '%s'", len(events), CALENDAR_NAME)
+
+    if not events:
+        # Diagnostic: also check primary calendar for events
+        logger.info("Diagnostic: checking primary calendar for events on %s...",
+                     target_date.strftime("%Y-%m-%d"))
+        primary_result = (
+            service.events()
+            .list(
+                calendarId="primary",
+                timeMin=time_min,
+                timeMax=time_max,
+                singleEvents=True,
+                orderBy="startTime",
+            )
+            .execute()
+        )
+        primary_events = primary_result.get("items", [])
+        if primary_events:
+            logger.info("Found %d events on PRIMARY calendar:", len(primary_events))
+            for ev in primary_events:
+                logger.info("  - '%s' at %s",
+                            ev.get("summary", "(no title)"),
+                            ev.get("start", {}).get("dateTime", ev.get("start", {}).get("date", "?")))
+        else:
+            logger.info("No events found on primary calendar either.")
 
     meetings = []
     for event in events:
         meeting = _parse_event(event)
         if meeting and meeting.attendees:
             meetings.append(meeting)
+        elif meeting:
+            logger.info("Skipping event '%s' — no external attendees", meeting.title)
+        else:
+            logger.info("Skipping all-day or unparseable event: '%s'",
+                        event.get("summary", "(no title)"))
 
     logger.info("Returning %d meetings with external attendees", len(meetings))
     return meetings
