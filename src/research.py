@@ -131,6 +131,9 @@ def research_attendee(
         f"Find the latest information and provide your research summary and talking points as JSON."
     )
 
+    # Capture the full prompt for transparency
+    full_prompt = f"SYSTEM:\n{system_prompt}\n\nUSER:\n{user_message}"
+
     logger.info("Researching attendee: %s", attendee.name)
 
     try:
@@ -148,6 +151,7 @@ def research_attendee(
             zoominfo=zoominfo,
             web_research_summary=summary,
             talking_points=parsed.get("talking_points", []),
+            research_prompt=full_prompt,
         )
 
     except requests.exceptions.HTTPError as e:

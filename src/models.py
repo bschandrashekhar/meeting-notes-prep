@@ -94,6 +94,7 @@ class AttendeeInsight(BaseModel):
     zoominfo: Optional[ZoomInfoEnrichment] = None
     web_research_summary: str = ""
     talking_points: list[str] = Field(default_factory=list)
+    research_prompt: str = ""  # the exact prompt sent to the AI model
 
 
 class MeetingBrief(BaseModel):
