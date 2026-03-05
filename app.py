@@ -95,51 +95,74 @@ section[data-testid="stSidebar"] .stButton > button:hover {
     border-color: var(--teal) !important;
 }
 
-/* ---- Buttons ---- */
-.stButton > button {
-    background: linear-gradient(135deg, var(--teal), var(--teal-dark)) !important;
-    color: white !important;
-    border: none !important;
-    border-radius: 8px !important;
-    font-weight: 600 !important;
-    padding: 0.5rem 1.5rem !important;
-    transition: all 0.25s ease !important;
-    box-shadow: 0 2px 8px rgba(0, 191, 166, 0.3) !important;
-}
-.stButton > button:hover {
-    transform: translateY(-1px) !important;
-    box-shadow: 0 4px 16px rgba(0, 191, 166, 0.4) !important;
-}
-
-/* Form submit button */
+/* ---- Buttons (unified sizing) ---- */
+.stButton > button,
 .stFormSubmitButton > button {
     background: linear-gradient(135deg, var(--teal), var(--teal-dark)) !important;
     color: white !important;
     border: none !important;
     border-radius: 8px !important;
     font-weight: 600 !important;
-    font-size: 1rem !important;
-    padding: 0.6rem 2rem !important;
-    box-shadow: 0 2px 8px rgba(0, 191, 166, 0.3) !important;
+    font-size: 0.9rem !important;
+    padding: 0.5rem 1.25rem !important;
     transition: all 0.25s ease !important;
+    box-shadow: 0 2px 8px rgba(0, 191, 166, 0.3) !important;
+    min-height: 2.5rem !important;
+    height: 2.5rem !important;
 }
+.stButton > button:hover,
 .stFormSubmitButton > button:hover {
     transform: translateY(-1px) !important;
     box-shadow: 0 4px 16px rgba(0, 191, 166, 0.4) !important;
 }
 
+/* ---- "Forgot Password?" / "Back to Sign In" link-style button ---- */
+.forgot-btn .stButton > button {
+    background: transparent !important;
+    color: var(--teal) !important;
+    box-shadow: none !important;
+    font-weight: 500 !important;
+    font-size: 0.85rem !important;
+    padding: 0.25rem 0 !important;
+    min-height: unset !important;
+    height: auto !important;
+    text-decoration: underline !important;
+}
+.forgot-btn .stButton > button:hover {
+    background: transparent !important;
+    color: var(--teal-dark) !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
 /* ---- Text inputs ---- */
-.stTextInput > div > div > input {
+.stTextInput > div > div > input,
+.stTextInput input {
     border-radius: 8px !important;
     border: 1.5px solid var(--border) !important;
     padding: 0.65rem 1rem !important;
     font-size: 0.95rem !important;
     transition: border-color 0.2s ease !important;
-    background: white !important;
+    background: #ffffff !important;
+    color: #1a1a2e !important;
+    -webkit-text-fill-color: #1a1a2e !important;
 }
-.stTextInput > div > div > input:focus {
+.stTextInput > div > div > input::placeholder,
+.stTextInput input::placeholder {
+    color: #94a3b8 !important;
+    -webkit-text-fill-color: #94a3b8 !important;
+    opacity: 1 !important;
+}
+.stTextInput > div > div > input:focus,
+.stTextInput input:focus {
     border-color: var(--teal) !important;
     box-shadow: 0 0 0 3px var(--teal-glow) !important;
+    color: #1a1a2e !important;
+    -webkit-text-fill-color: #1a1a2e !important;
+}
+/* Labels */
+.stTextInput label, .stSelectbox label {
+    color: var(--text-primary) !important;
 }
 
 /* ---- Select box ---- */
@@ -196,70 +219,36 @@ section[data-testid="stSidebar"] .stButton > button:hover {
     font-weight: 600;
 }
 
-/* ---- Result card ---- */
-.result-card {
-    background: var(--card-bg);
-    border-radius: var(--radius);
-    padding: 1.5rem;
-    margin-bottom: 1rem;
-    box-shadow: var(--shadow);
-    border: 1px solid var(--border);
-    transition: all 0.25s ease;
+/* ---- Result containers ---- */
+div[data-testid="stVerticalBlock"] > div[data-testid="stContainer"] {
+    border-radius: var(--radius) !important;
+    border-color: var(--border) !important;
+    box-shadow: var(--shadow) !important;
+    transition: all 0.25s ease !important;
+    background: var(--card-bg) !important;
 }
-.result-card:hover {
-    box-shadow: var(--shadow-md);
-    transform: translateY(-2px);
-    border-color: var(--teal);
+div[data-testid="stVerticalBlock"] > div[data-testid="stContainer"]:hover {
+    box-shadow: var(--shadow-md) !important;
+    border-color: var(--teal) !important;
 }
-.result-card .card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 0.75rem;
-}
-.result-card .card-title {
-    font-size: 1.15rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin: 0;
-}
-.result-card .card-badge {
-    background: var(--teal-glow);
-    color: var(--teal-dark);
-    font-weight: 700;
-    font-size: 0.85rem;
-    padding: 0.3rem 0.75rem;
-    border-radius: 20px;
-    white-space: nowrap;
-}
-.result-card .card-meta {
-    color: var(--text-secondary);
-    font-size: 0.82rem;
-    margin-bottom: 0.75rem;
-}
-.result-card .card-summary {
-    color: var(--text-primary);
-    font-size: 0.92rem;
-    line-height: 1.65;
-    margin-bottom: 1rem;
-}
-.result-card .card-actions a {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    background: linear-gradient(135deg, var(--teal), var(--teal-dark));
+
+/* ---- Link button (Download PDF) ---- */
+.stLinkButton > a {
+    background: linear-gradient(135deg, var(--teal), var(--teal-dark)) !important;
     color: white !important;
-    text-decoration: none;
-    padding: 0.4rem 1rem;
-    border-radius: 6px;
-    font-size: 0.85rem;
-    font-weight: 500;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 6px rgba(0, 191, 166, 0.25);
+    border: none !important;
+    border-radius: 6px !important;
+    font-size: 0.85rem !important;
+    font-weight: 500 !important;
+    padding: 0.4rem 1rem !important;
+    min-height: unset !important;
+    height: auto !important;
+    box-shadow: 0 2px 6px rgba(0, 191, 166, 0.25) !important;
+    transition: all 0.2s ease !important;
 }
-.result-card .card-actions a:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 191, 166, 0.35);
+.stLinkButton > a:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(0, 191, 166, 0.35) !important;
 }
 
 /* ---- Login card ---- */
@@ -354,6 +343,8 @@ def check_login():
     with col_c:
         st.markdown("""
         <div style="text-align:center; margin-top: 2rem; margin-bottom: 1rem;">
+            <img src="https://cloudchillies.com/img/logo.svg" alt="Cloud Chillies"
+                 style="height: 40px; margin-bottom: 1.25rem;" />
             <h1 style="color: #0f1b2d; font-size: 1.8rem; font-weight: 700; margin-bottom: 0.25rem;">
                 Case Study Search
             </h1>
@@ -391,9 +382,12 @@ def _login_form():
             else:
                 st.error("Invalid username or password.")
 
-    if st.button("Forgot Password?", use_container_width=True):
-        st.session_state["show_forgot_password"] = True
-        st.rerun()
+    with st.container():
+        st.markdown('<div class="forgot-btn">', unsafe_allow_html=True)
+        if st.button("Forgot Password?"):
+            st.session_state["show_forgot_password"] = True
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
 
 def _forgot_password_form():
@@ -412,9 +406,12 @@ def _forgot_password_form():
             else:
                 st.error("Email address does not match the recovery email on file.")
 
-    if st.button("Back to Sign In", use_container_width=True):
-        st.session_state["show_forgot_password"] = False
-        st.rerun()
+    with st.container():
+        st.markdown('<div class="forgot-btn">', unsafe_allow_html=True)
+        if st.button("Back to Sign In"):
+            st.session_state["show_forgot_password"] = False
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
 
 def _mask_email(email: str) -> str:
@@ -459,7 +456,9 @@ if not check_login():
 # Sidebar
 with st.sidebar:
     st.markdown(f"""
-    <div style="padding: 1rem 0;">
+    <div style="padding: 1rem 0; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 1rem;">
+        <img src="https://cloudchillies.com/img/logo.svg" alt="Cloud Chillies"
+             style="height: 28px; filter: brightness(0) invert(1); opacity: 0.85; margin-bottom: 1rem;" />
         <div style="font-size: 0.82rem; color: #94a3b8; margin-bottom: 0.25rem;">Signed in as</div>
         <div style="font-weight: 600; font-size: 1rem;">{ADMIN_USERNAME}</div>
     </div>
@@ -545,6 +544,10 @@ except Exception:
 # Hero banner
 st.markdown(f"""
 <div class="hero-banner">
+    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.75rem; position: relative;">
+        <img src="https://cloudchillies.com/img/logo.svg" alt="Cloud Chillies"
+             style="height: 32px; filter: brightness(0) invert(1); opacity: 0.9;" />
+    </div>
     <h1>Case Study Search</h1>
     <p>Search across <span class="accent">{total_count} case studies</span> using AI-powered
     semantic search with cross-encoder reranking</p>
@@ -584,37 +587,32 @@ if query:
             if r["doc_type"]:
                 meta_parts.append(r["doc_type"])
             meta_parts.append(r["filename"])
-            meta_text = " &middot; ".join(meta_parts)
+            meta_text = " · ".join(meta_parts)
 
-            # Try to get signed download URL
-            download_html = ""
-            try:
-                supabase, _ = get_clients()
-                signed = supabase.storage.from_(STORAGE_BUCKET).create_signed_url(
-                    r["filename"], 3600
-                )
-                if signed and signed.get("signedURL"):
-                    download_html = f'''
-                    <div class="card-actions">
-                        <a href="{signed['signedURL']}" target="_blank">
-                            Download PDF
-                        </a>
-                    </div>
-                    '''
-            except Exception:
-                pass
+            with st.container(border=True):
+                col_title, col_score = st.columns([5, 1])
+                with col_title:
+                    st.markdown(f"**{i}. {title}**")
+                with col_score:
+                    st.markdown(
+                        f'<span style="background:rgba(0,191,166,0.15); color:#009e8c; '
+                        f'font-weight:700; font-size:0.85rem; padding:0.3rem 0.75rem; '
+                        f'border-radius:20px; white-space:nowrap;">{r["relevance_score"]}%</span>',
+                        unsafe_allow_html=True,
+                    )
 
-            st.markdown(f"""
-            <div class="result-card">
-                <div class="card-header">
-                    <h3 class="card-title">{i}. {title}</h3>
-                    <span class="card-badge">{r['relevance_score']}%</span>
-                </div>
-                <div class="card-meta">{meta_text}</div>
-                <div class="card-summary">{r['summary']}</div>
-                {download_html}
-            </div>
-            """, unsafe_allow_html=True)
+                st.caption(meta_text)
+                st.write(r["summary"])
+
+                try:
+                    supabase, _ = get_clients()
+                    signed = supabase.storage.from_(STORAGE_BUCKET).create_signed_url(
+                        r["filename"], 3600
+                    )
+                    if signed and signed.get("signedURL"):
+                        st.link_button("Download PDF", signed["signedURL"])
+                except Exception:
+                    pass
 
 else:
     # Welcome state — stats cards
