@@ -43,7 +43,7 @@ ZOOMINFO_BASE_URL = "https://api.zoominfo.com"
 ANTHROPIC_MODEL = "claude-sonnet-4-6"
 
 # --- Perplexity AI (fallback) ---
-PERPLEXITY_MODEL = "sonar-reasoning-pro"
+PERPLEXITY_MODEL = "sonar-pro"
 PERPLEXITY_BASE_URL = "https://api.perplexity.ai"
 
 # --- Paths ---

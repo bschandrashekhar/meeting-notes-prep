@@ -54,7 +54,7 @@ jobs:
       #    By default, main.py preps for tomorrow's meetings (date_of_meeting = today + 1 day)
       - name: Run meeting prep
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
           ZOOMINFO_USERNAME: ${{ secrets.ZOOMINFO_USERNAME }}
           ZOOMINFO_PASSWORD: ${{ secrets.ZOOMINFO_PASSWORD }}
           TARGET_EMAIL: sateesh@mindruby.com
