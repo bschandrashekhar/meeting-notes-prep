@@ -637,7 +637,7 @@ with search_col1:
         label_visibility="collapsed",
     )
 with search_col2:
-    top_k = st.selectbox("Results", [3, 5, 10], index=1, label_visibility="collapsed")
+    top_k = st.selectbox("Results", [3, 5, 10], index=1, format_func=lambda x: f"Top {x}")
 with search_col3:
     search_clicked = st.button("Search", use_container_width=True)
 
