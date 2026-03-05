@@ -156,37 +156,20 @@ section[data-testid="stSidebar"] .stButton > button:hover {
     box-shadow: 0 4px 16px rgba(0, 191, 166, 0.4) !important;
 }
 
-/* ---- "Forgot Password?" / "Back to Sign In" link-style button ---- */
-.forgot-btn {
-    display: flex;
-    justify-content: center;
-}
-.forgot-btn .stButton > button {
+/* ---- Secondary form button (Forgot Password / Back to Sign In) ---- */
+.stForm [data-testid="stHorizontalBlock"] .stFormSubmitButton:last-child > button {
     background: transparent !important;
     color: var(--teal) !important;
     box-shadow: none !important;
     font-weight: 500 !important;
-    font-size: 0.85rem !important;
-    padding: 0.25rem 0 !important;
-    min-height: unset !important;
-    height: auto !important;
     text-decoration: underline !important;
+    border: none !important;
 }
-.forgot-btn .stButton > button:hover {
+.stForm [data-testid="stHorizontalBlock"] .stFormSubmitButton:last-child > button:hover {
     background: transparent !important;
     color: var(--teal-dark) !important;
     transform: none !important;
     box-shadow: none !important;
-}
-
-/* ---- Center login form buttons ---- */
-.login-form-wrap .stFormSubmitButton {
-    display: flex;
-    justify-content: center;
-}
-.login-form-wrap .stFormSubmitButton > button {
-    width: auto !important;
-    min-width: 200px !important;
 }
 
 /* ---- Text inputs ---- */
@@ -457,11 +440,15 @@ def check_login():
 
 
 def _login_form():
-    st.markdown('<div class="login-form-wrap">', unsafe_allow_html=True)
     with st.form("login_form"):
         st.text_input("Username", key="login_username")
         st.text_input("Password", type="password", key="login_password")
-        submitted = st.form_submit_button("Sign In")
+
+        btn_l, btn_c1, btn_c2, btn_r = st.columns([1, 1, 1, 1])
+        with btn_c1:
+            submitted = st.form_submit_button("Sign In", use_container_width=True)
+        with btn_c2:
+            forgot = st.form_submit_button("Forgot Password?", use_container_width=True)
 
         if submitted:
             if (st.session_state.login_username == ADMIN_USERNAME
@@ -470,22 +457,22 @@ def _login_form():
                 st.rerun()
             else:
                 st.error("Invalid username or password.")
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown('<div class="forgot-btn">', unsafe_allow_html=True)
-    if st.button("Forgot Password?"):
-        st.session_state["show_forgot_password"] = True
-        st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
+        if forgot:
+            st.session_state["show_forgot_password"] = True
+            st.rerun()
 
 
 def _forgot_password_form():
     st.markdown("##### Password Recovery")
 
-    st.markdown('<div class="login-form-wrap">', unsafe_allow_html=True)
     with st.form("forgot_password_form"):
         email = st.text_input("Enter your recovery email address")
-        submitted = st.form_submit_button("Send Password")
+
+        btn_l, btn_c1, btn_c2, btn_r = st.columns([1, 1, 1, 1])
+        with btn_c1:
+            submitted = st.form_submit_button("Send Password", use_container_width=True)
+        with btn_c2:
+            back = st.form_submit_button("Back to Sign In", use_container_width=True)
 
         if submitted:
             if email == RECOVERY_EMAIL:
@@ -495,13 +482,9 @@ def _forgot_password_form():
                     st.error("Could not send email. Please contact the administrator.")
             else:
                 st.error("Email address does not match the recovery email on file.")
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown('<div class="forgot-btn">', unsafe_allow_html=True)
-    if st.button("Back to Sign In"):
-        st.session_state["show_forgot_password"] = False
-        st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
+        if back:
+            st.session_state["show_forgot_password"] = False
+            st.rerun()
 
 
 def _mask_email(email: str) -> str:
