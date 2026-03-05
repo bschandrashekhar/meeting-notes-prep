@@ -110,8 +110,11 @@ html, body, [class*="css"] {
     color: var(--text-secondary) !important;
 }
 
-/* ---- Hide default Streamlit branding ---- */
-#MainMenu, footer, header {visibility: hidden;}
+/* ---- Hide default Streamlit branding & remove top padding ---- */
+#MainMenu, footer, header {visibility: hidden; height: 0; margin: 0; padding: 0;}
+.stApp > header {display: none;}
+.stMainBlockContainer {padding-top: 1rem !important;}
+section[data-testid="stSidebar"] > div:first-child {padding-top: 1rem !important;}
 
 /* ---- Sidebar ---- */
 section[data-testid="stSidebar"] {
