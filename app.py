@@ -443,7 +443,7 @@ def _login_form():
         st.text_input("Username", key="login_username")
         st.text_input("Password", type="password", key="login_password")
 
-        btn_l, btn_c1, btn_c2, btn_r = st.columns([1, 1, 1, 1])
+        btn_c1, btn_c2 = st.columns(2)
         with btn_c1:
             submitted = st.form_submit_button("Sign In", use_container_width=True)
         with btn_c2:
@@ -467,7 +467,7 @@ def _forgot_password_form():
     with st.form("forgot_password_form"):
         email = st.text_input("Enter your recovery email address")
 
-        btn_l, btn_c1, btn_c2, btn_r = st.columns([1, 1, 1, 1])
+        btn_c1, btn_c2 = st.columns(2)
         with btn_c1:
             submitted = st.form_submit_button("Send Password", use_container_width=True)
         with btn_c2:
