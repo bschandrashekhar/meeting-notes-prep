@@ -8,6 +8,7 @@ import anthropic
 from src.config import ANTHROPIC_API_KEY, ANTHROPIC_MODEL
 from src.models import (
     AttendeeInsight,
+    CaseStudyMatch,
     Meeting,
     MeetingBrief,
     ZoomInfoEnrichment,
@@ -182,8 +183,9 @@ def research_attendee(
 def synthesize_meeting_brief(
     meeting: Meeting,
     attendee_insights: list[AttendeeInsight],
+    case_studies: list[CaseStudyMatch] | None = None,
 ) -> MeetingBrief:
-    """Synthesize a meeting brief from all attendee insights."""
+    """Synthesize a meeting brief from all attendee insights and case studies."""
 
     # Build context from all attendee insights
     insights_text = []
@@ -202,22 +204,54 @@ def synthesize_meeting_brief(
 
     all_insights = "\n".join(insights_text)
 
+    # Build case study context
+    case_study_context = ""
+    if case_studies:
+        cs_parts = ["\n\nRelevant Case Studies (from our portfolio):"]
+        for i, cs in enumerate(case_studies, 1):
+            cs_parts.append(
+                f"\n{i}. {cs.filename} (Company: {cs.company_name}, "
+                f"Use Case: {cs.use_case}, Match: {cs.similarity_score:.0%})\n"
+                f"   Summary: {cs.summary}"
+            )
+        case_study_context = "\n".join(cs_parts)
+
+    case_study_json_schema = ""
+    case_study_instruction = ""
+    if case_studies:
+        case_study_json_schema = (
+            ',\n'
+            '    "case_study_relevance": {"filename1.pdf": "Why this case study is relevant", '
+            '"filename2.pdf": "Why this one is relevant"}'
+        )
+        case_study_instruction = (
+            "\nFor each case study, explain in 1-2 sentences why it's relevant "
+            "to this specific meeting and how it could be used in conversation."
+        )
+
     system_prompt = (
         "You are a meeting preparation strategist. Given research on meeting "
         "attendees, synthesize key themes and suggest strategic questions.\n\n"
         "Respond in this exact JSON format:\n"
         "{\n"
         '    "key_themes": ["theme 1", "theme 2", "theme 3"],\n'
-        '    "suggested_questions": ["question 1", "question 2", "question 3", "question 4", "question 5"]\n'
+        '    "suggested_questions": ["question 1", "question 2", "question 3", "question 4", "question 5"]'
+        f"{case_study_json_schema}\n"
         "}\n\n"
         "Key themes should capture cross-cutting patterns across attendees.\n"
         "Questions should be strategic, open-ended, and designed to build rapport."
+        f"{case_study_instruction}"
     )
 
     user_message = (
         f"Meeting: {meeting.title}\n"
-        f"Time: {meeting.start_time.strftime('%I:%M %p')} - {meeting.end_time.strftime('%I:%M %p')}\n\n"
-        f"Attendee Research:\n{all_insights}\n\n"
+        f"Time: {meeting.start_time.strftime('%I:%M %p')} - {meeting.end_time.strftime('%I:%M %p')}\n"
+    )
+    if meeting.agenda:
+        user_message += f"Agenda: {meeting.agenda}\n"
+    user_message += (
+        f"\nAttendee Research:\n{all_insights}"
+        f"{case_study_context}\n\n"
         f"Synthesize key themes and suggest strategic questions for this meeting."
     )
 
@@ -227,11 +261,18 @@ def synthesize_meeting_brief(
         result_text, _ = _chat(system_prompt, user_message)
         parsed = _parse_json_response(result_text)
 
+        # Populate relevance notes on case studies
+        enriched_case_studies = list(case_studies) if case_studies else []
+        relevance_map = parsed.get("case_study_relevance", {})
+        for cs in enriched_case_studies:
+            cs.relevance_note = relevance_map.get(cs.filename, "")
+
         return MeetingBrief(
             meeting=meeting,
             attendee_insights=attendee_insights,
             key_themes=parsed.get("key_themes", []),
             suggested_questions=parsed.get("suggested_questions", []),
+            recommended_case_studies=enriched_case_studies,
         )
 
     except Exception as e:
@@ -239,6 +280,7 @@ def synthesize_meeting_brief(
         return MeetingBrief(
             meeting=meeting,
             attendee_insights=attendee_insights,
+            recommended_case_studies=list(case_studies) if case_studies else [],
         )
 
 

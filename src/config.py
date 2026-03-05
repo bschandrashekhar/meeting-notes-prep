@@ -36,6 +36,13 @@ _token_json = os.getenv("GOOGLE_TOKEN_JSON", "")
 if _token_json and not GOOGLE_TOKEN_FILE.exists():
     GOOGLE_TOKEN_FILE.write_text(_token_json)
 
+# --- Voyage AI (embeddings) ---
+VOYAGE_API_KEY = os.getenv("VOYAGE_API_KEY", "")
+
+# --- Supabase (vector store) ---
+SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "")
+
 # --- ZoomInfo ---
 ZOOMINFO_BASE_URL = "https://api.zoominfo.com"
 

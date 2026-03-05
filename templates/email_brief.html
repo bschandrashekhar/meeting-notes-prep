@@ -223,6 +223,35 @@
 </tr>
 {% endif %}
 
+{% if mb.recommended_case_studies %}
+<!-- Recommended Case Studies -->
+<tr>
+<td style="padding:0 32px 24px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0faf0;border-radius:6px;border:1px solid #c8e6c9;">
+    <tr><td style="padding:14px 20px;">
+      <p style="margin:0 0 10px;color:#1a1a2e;font-size:13px;font-weight:600;">Recommended Case Studies</p>
+      {% for cs in mb.recommended_case_studies %}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:10px;background-color:#ffffff;border-radius:4px;border:1px solid #e0e0e0;">
+        <tr><td style="padding:10px 14px;">
+          <p style="margin:0 0 4px;font-size:13px;font-weight:600;color:#2e7d32;">
+            {{ cs.company_name }}{% if cs.use_case %} &mdash; {{ cs.use_case }}{% endif %}
+          </p>
+          <p style="margin:0 0 4px;font-size:11px;color:#888;">
+            {{ cs.filename }}
+            {% if cs.doc_type %}&bull; Type: {{ cs.doc_type }}{% endif %}
+            &bull; Match: {{ (cs.similarity_score * 100)|round(0)|int }}%
+          </p>
+          {% if cs.summary %}<p style="margin:0 0 4px;font-size:12px;color:#444;">{{ cs.summary }}</p>{% endif %}
+          {% if cs.relevance_note %}<p style="margin:0;font-size:12px;color:#2e7d32;font-style:italic;">{{ cs.relevance_note }}</p>{% endif %}
+        </td></tr>
+      </table>
+      {% endfor %}
+    </td></tr>
+  </table>
+</td>
+</tr>
+{% endif %}
+
 {% if not loop.last %}
 <!-- Divider between meetings -->
 <tr><td style="padding:0 32px;"><hr style="border:none;border-top:2px solid #e8e8ee;margin:0;"></td></tr>

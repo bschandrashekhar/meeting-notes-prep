@@ -107,7 +107,21 @@ def run_prep(target_date: date) -> None:
                     attendee_insights.append(insight)
                     logger.info("  Researched: %s (for %s)", att.name, meeting.title)
 
-                brief = synthesize_meeting_brief(meeting, attendee_insights)
+                # --- Stage 3b: Case study search ---
+                case_studies = []
+                from src.config import SUPABASE_URL
+                if SUPABASE_URL:
+                    try:
+                        logger.info("Stage 3b: Searching case studies for: %s", meeting.title)
+                        from src.case_study_search import search_case_studies
+                        case_studies = search_case_studies(meeting, attendee_insights)
+                        logger.info("  Found %d relevant case studies", len(case_studies))
+                    except Exception as e:
+                        logger.warning("  Case study search failed: %s. Continuing without.", e)
+                else:
+                    logger.info("Stage 3b: Skipping case study search (SUPABASE_URL not set)")
+
+                brief = synthesize_meeting_brief(meeting, attendee_insights, case_studies=case_studies)
                 meeting_briefs.append(brief)
                 logger.info("  Synthesized brief for: %s", meeting.title)
 

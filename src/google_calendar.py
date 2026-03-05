@@ -66,30 +66,79 @@ def _get_calendar_id(service, name: str) -> str:
     return "primary"
 
 
-def _parse_attendees_from_description(description: str) -> list[Attendee]:
-    """Parse attendees from event description.
+def _parse_description(description: str) -> tuple[str, list[Attendee]]:
+    """Parse agenda and attendees from event description.
 
-    Expected format — one attendee per line, bulleted:
+    Expected format:
+        Agenda: This is the meeting agenda...
+
+        Attendees:
+        1. Name - Designation
+        2. Name - Designation
+
+    Legacy format (no Agenda/Attendees headers) is still supported:
         • Name - Designation
         - Name - Designation
-        * Name - Designation
     """
+    agenda = ""
     attendees = []
-    for line in description.splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        # Strip common bullet characters (•, -, *, –) and numbered prefixes (1., 2.)
-        line = re.sub(r'^(?:\d+[.)]\s*|[•\-\*–]\s*)', '', line).strip()
-        if not line:
-            continue
-        # Split on first " - " to separate name from designation
-        parts = re.split(r'\s*-\s*', line, maxsplit=1)
-        name = parts[0].strip()
-        title = parts[1].strip() if len(parts) > 1 else ""
-        if name:
-            attendees.append(Attendee(name=name, title=title))
-    return attendees
+    lines = description.splitlines()
+
+    # Check if description uses the new structured format
+    has_attendees_header = any(
+        line.strip().lower().startswith("attendees:") for line in lines
+    )
+
+    if has_attendees_header:
+        in_attendees_section = False
+        for line in lines:
+            stripped = line.strip()
+            if not stripped:
+                continue
+            # Extract agenda
+            if stripped.lower().startswith("agenda:"):
+                agenda = stripped[len("agenda:"):].strip()
+                continue
+            # Detect attendees section
+            if stripped.lower().startswith("attendees:"):
+                in_attendees_section = True
+                # Check if there's content after "Attendees:" on the same line
+                after = stripped[len("attendees:"):].strip()
+                if after:
+                    att = _parse_attendee_line(after)
+                    if att:
+                        attendees.append(att)
+                continue
+            if in_attendees_section:
+                att = _parse_attendee_line(stripped)
+                if att:
+                    attendees.append(att)
+    else:
+        # Legacy format: every non-empty line is an attendee
+        for line in lines:
+            stripped = line.strip()
+            if not stripped:
+                continue
+            att = _parse_attendee_line(stripped)
+            if att:
+                attendees.append(att)
+
+    return agenda, attendees
+
+
+def _parse_attendee_line(line: str) -> Attendee | None:
+    """Parse a single attendee line, stripping bullets/numbers."""
+    # Strip common bullet characters (•, -, *, –) and numbered prefixes (1., 2.)
+    line = re.sub(r'^(?:\d+[.)]\s*|[•\-\*–]\s*)', '', line).strip()
+    if not line:
+        return None
+    # Split on first " - " to separate name from designation
+    parts = re.split(r'\s*-\s*', line, maxsplit=1)
+    name = parts[0].strip()
+    title = parts[1].strip() if len(parts) > 1 else ""
+    if name:
+        return Attendee(name=name, title=title)
+    return None
 
 
 def _name_from_email(email: str) -> str:
@@ -216,9 +265,9 @@ def _parse_event(event: dict) -> Meeting | None:
 
     raw_invite_list = event.get("attendees", [])
 
-    # Primary: parse attendees from description (bullet list: Name - Designation)
+    # Primary: parse attendees (and agenda) from description
     description = event.get("description", "")
-    attendees = _parse_attendees_from_description(description)
+    agenda, attendees = _parse_description(description)
 
     if attendees:
         # Description attendees have no email/domain. Infer the company domain
@@ -250,6 +299,7 @@ def _parse_event(event: dict) -> Meeting | None:
         end_time=datetime.fromisoformat(end["dateTime"]),
         location=event.get("location", ""),
         description=event.get("description", ""),
+        agenda=agenda,
         attendees=attendees,
         meet_link=meet_link,
         calendar_id=event.get("id", ""),

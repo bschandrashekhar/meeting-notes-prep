@@ -24,6 +24,7 @@ class Meeting(BaseModel):
     end_time: datetime
     location: str = ""
     description: str = ""
+    agenda: str = ""
     attendees: list[Attendee] = Field(default_factory=list)
     meet_link: str = ""
     calendar_id: str = ""
@@ -86,6 +87,19 @@ class ZoomInfoEnrichment(BaseModel):
     contact_candidates: list[ContactProfile] = Field(default_factory=list)
 
 
+# --- Case study models ---
+
+
+class CaseStudyMatch(BaseModel):
+    filename: str
+    company_name: str = ""
+    use_case: str = ""
+    doc_type: str = ""
+    summary: str = ""
+    similarity_score: float = 0.0
+    relevance_note: str = ""
+
+
 # --- Brief models ---
 
 
@@ -102,6 +116,7 @@ class MeetingBrief(BaseModel):
     attendee_insights: list[AttendeeInsight] = Field(default_factory=list)
     key_themes: list[str] = Field(default_factory=list)
     suggested_questions: list[str] = Field(default_factory=list)
+    recommended_case_studies: list[CaseStudyMatch] = Field(default_factory=list)
 
 
 class DailyBrief(BaseModel):
