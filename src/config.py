@@ -40,7 +40,7 @@ if _token_json and not GOOGLE_TOKEN_FILE.exists():
 ZOOMINFO_BASE_URL = "https://api.zoominfo.com"
 
 # --- Anthropic Claude AI ---
-ANTHROPIC_MODEL = "claude-sonnet-4-6"
+ANTHROPIC_MODEL = "claude-opus-4-6"
 
 # --- Perplexity AI (fallback) ---
 PERPLEXITY_MODEL = "sonar-reasoning-pro"
