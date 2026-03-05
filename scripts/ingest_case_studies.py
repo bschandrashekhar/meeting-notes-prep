@@ -214,8 +214,8 @@ def sync(dry_run: bool = False, single_file: str | None = None):
         logger.info("  %s: %s", action, filename)
 
         try:
-            # Extract text
-            text = extract_text_from_pdf(path)
+            # Extract text and strip null bytes (Postgres rejects \u0000)
+            text = extract_text_from_pdf(path).replace('\x00', '')
             if not text.strip():
                 logger.warning("  Skipping %s — no text extracted", filename)
                 continue

@@ -1,4 +1,4 @@
-"""Case study vector search via Supabase pgvector + Voyage AI embeddings."""
+"""Case study vector search via Supabase pgvector + Voyage AI embeddings + reranking."""
 
 import logging
 from typing import Optional
@@ -76,29 +76,58 @@ def search_case_studies(
         )
         query_embedding = result.embeddings[0]
 
-        # Search Supabase via RPC
+        # Search Supabase via RPC — fetch 2x candidates for reranking
         supabase = _get_supabase()
         response = supabase.rpc(
             "match_case_studies",
             {
                 "query_embedding": query_embedding,
-                "match_count": match_count,
+                "match_count": match_count * 2,
                 "match_threshold": 0.3,
             },
         ).execute()
 
-        matches = []
-        for row in response.data:
-            matches.append(CaseStudyMatch(
-                filename=row["filename"],
-                company_name=row.get("company_name", ""),
-                use_case=row.get("use_case", ""),
-                doc_type=row.get("doc_type", ""),
-                summary=row.get("summary", ""),
-                similarity_score=round(row.get("similarity", 0.0), 3),
-            ))
+        if not response.data:
+            logger.info("No case studies matched the similarity threshold")
+            return []
 
-        logger.info("Found %d matching case studies", len(matches))
+        # Build candidate list from vector search results
+        candidates = []
+        for row in response.data:
+            candidates.append({
+                "match": CaseStudyMatch(
+                    filename=row["filename"],
+                    company_name=row.get("company_name", ""),
+                    use_case=row.get("use_case", ""),
+                    doc_type=row.get("doc_type", ""),
+                    summary=row.get("summary", ""),
+                    similarity_score=round(row.get("similarity", 0.0), 3),
+                ),
+                "summary": row.get("summary", ""),
+            })
+
+        logger.info("Vector search returned %d candidates, reranking...", len(candidates))
+
+        # Rerank candidates using Voyage AI cross-encoder
+        rerank_docs = [
+            f"{c['match'].company_name} — {c['match'].use_case}: {c['summary']}"
+            for c in candidates
+        ]
+        rerank_result = voyage.rerank(
+            query=query_text[:8000],
+            documents=rerank_docs,
+            model="rerank-2",
+            top_k=match_count,
+        )
+
+        # Build final results ordered by rerank score
+        matches = []
+        for item in rerank_result.results:
+            candidate = candidates[item.index]["match"]
+            candidate.similarity_score = round(item.relevance_score, 3)
+            matches.append(candidate)
+
+        logger.info("Reranked to %d case studies", len(matches))
         for m in matches:
             logger.info("  %.3f — %s (%s)", m.similarity_score, m.filename, m.company_name)
 
