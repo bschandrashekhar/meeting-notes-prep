@@ -19,6 +19,7 @@ scripts/
 templates/
   email_brief.html   — Jinja2 HTML email template (inline CSS for email clients)
 all_casestudies_for_rag/ — PDF case studies (not in git)
+app.py                 — Streamlit search UI for case studies
 ```
 
 ## Running
@@ -34,6 +35,9 @@ python -m src.main --date 2026-03-06
 python -m scripts.ingest_case_studies
 python -m scripts.ingest_case_studies --dry-run
 python -m scripts.ingest_case_studies --file "Acme_CRM_MP.pdf"
+
+# Case study search UI
+streamlit run app.py
 
 # Google OAuth setup (one-time, generates token.json)
 python setup_google.py
@@ -62,6 +66,7 @@ Google OAuth files (not env vars): `credentials.json`, `token.json`
 - Google APIs — Calendar (readonly) + Gmail (send) via OAuth2
 - Jinja2 — HTML email templating
 - pdfplumber — PDF text extraction for ingestion
+- Streamlit — Case study search UI
 
 ## Pipeline Stages
 

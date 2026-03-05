@@ -9,3 +9,4 @@ requests>=2.31
 voyageai>=0.3.7
 supabase>=2.4.0
 pdfplumber>=0.11.0
+streamlit>=1.38.0
