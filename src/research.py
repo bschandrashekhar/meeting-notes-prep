@@ -123,6 +123,8 @@ def research_attendee(
     system_prompt = (
         "You are a meeting preparation research assistant. "
         "Use web search to research the attendee and their company to help prepare for an upcoming meeting.\n\n"
+        "IMPORTANT: Do NOT research or include results about CloudChillies or MindRuby — "
+        "these are our own companies. Focus only on the external attendee and their organisation.\n\n"
         "Search for:\n"
         "1. The person's current role, background, and recent public activity\n"
         "2. Their company's latest news, funding, product launches (last 3 months)\n"
