@@ -1,6 +1,9 @@
 """Streamlit app for searching case studies via Voyage AI + Supabase pgvector."""
 
+import base64
 import os
+import smtplib
+from email.mime.text import MIMEText
 
 import streamlit as st
 import voyageai
@@ -22,6 +25,13 @@ def _get_secret(key: str) -> str:
 SUPABASE_URL = _get_secret("SUPABASE_URL")
 SUPABASE_SERVICE_KEY = _get_secret("SUPABASE_SERVICE_KEY")
 VOYAGE_API_KEY = _get_secret("VOYAGE_API_KEY")
+ADMIN_USERNAME = _get_secret("ADMIN_USERNAME") or "admin"
+ADMIN_PASSWORD = _get_secret("ADMIN_PASSWORD")
+RECOVERY_EMAIL = _get_secret("RECOVERY_EMAIL")
+SMTP_HOST = _get_secret("SMTP_HOST") or "smtp.gmail.com"
+SMTP_PORT = int(_get_secret("SMTP_PORT") or "587")
+SMTP_USERNAME = _get_secret("SMTP_USERNAME")
+SMTP_PASSWORD = _get_secret("SMTP_PASSWORD")
 
 STORAGE_BUCKET = "case-studies"
 
@@ -31,8 +41,113 @@ st.set_page_config(
     layout="wide",
 )
 
+
+# --- Authentication ---
+
+def check_login():
+    """Show login form and gate access."""
+    if st.session_state.get("authenticated"):
+        return True
+
+    st.title("Case Study Search")
+    st.markdown("Please log in to continue.")
+
+    # Toggle between login and forgot password
+    if st.session_state.get("show_forgot_password"):
+        _forgot_password_form()
+    else:
+        _login_form()
+
+    return False
+
+
+def _login_form():
+    with st.form("login_form"):
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+        submitted = st.form_submit_button("Log in", use_container_width=True)
+
+        if submitted:
+            if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
+                st.session_state["authenticated"] = True
+                st.rerun()
+            else:
+                st.error("Invalid username or password.")
+
+    if st.button("Forgot Password?"):
+        st.session_state["show_forgot_password"] = True
+        st.rerun()
+
+
+def _forgot_password_form():
+    st.subheader("Password Recovery")
+
+    with st.form("forgot_password_form"):
+        email = st.text_input("Enter your recovery email address")
+        submitted = st.form_submit_button("Send Password", use_container_width=True)
+
+        if submitted:
+            if email == RECOVERY_EMAIL:
+                if _send_recovery_email():
+                    st.success(f"Password sent to {_mask_email(email)}. Check your inbox.")
+                else:
+                    st.error("Could not send email. Please contact the administrator.")
+            else:
+                st.error("Email address does not match the recovery email on file.")
+
+    if st.button("Back to Login"):
+        st.session_state["show_forgot_password"] = False
+        st.rerun()
+
+
+def _mask_email(email: str) -> str:
+    """Mask email for display: b***@yahoo.com"""
+    local, domain = email.split("@")
+    return f"{local[0]}{'*' * (len(local) - 1)}@{domain}"
+
+
+def _send_recovery_email() -> bool:
+    """Send the admin password to the recovery email via SMTP."""
+    if not SMTP_USERNAME or not SMTP_PASSWORD:
+        return False
+
+    msg = MIMEText(
+        f"Your Case Study Search login credentials:\n\n"
+        f"Username: {ADMIN_USERNAME}\n"
+        f"Password: {ADMIN_PASSWORD}\n\n"
+        f"— Case Study Search App",
+        "plain",
+    )
+    msg["Subject"] = "Case Study Search — Password Recovery"
+    msg["From"] = SMTP_USERNAME
+    msg["To"] = RECOVERY_EMAIL
+
+    try:
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+            server.starttls()
+            server.login(SMTP_USERNAME, SMTP_PASSWORD)
+            server.send_message(msg)
+        return True
+    except Exception:
+        return False
+
+
+# --- Gate access ---
+if not check_login():
+    st.stop()
+
+
+# --- Authenticated content below ---
+
 st.title("Case Study Search")
 st.markdown("Search across **133 case studies** using AI-powered semantic search with reranking.")
+
+# Logout button in sidebar
+with st.sidebar:
+    st.markdown(f"Logged in as **{ADMIN_USERNAME}**")
+    if st.button("Logout"):
+        st.session_state["authenticated"] = False
+        st.rerun()
 
 
 @st.cache_resource
@@ -94,9 +209,7 @@ def search(query: str, top_k: int = 5) -> list[dict]:
     return results
 
 
-# --- UI ---
-
-# Check config
+# --- Check config ---
 if not SUPABASE_URL or not SUPABASE_SERVICE_KEY or not VOYAGE_API_KEY:
     st.error("Missing environment variables. Set SUPABASE_URL, SUPABASE_SERVICE_KEY, and VOYAGE_API_KEY in .env")
     st.stop()
