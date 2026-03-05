@@ -71,6 +71,27 @@ html, body, [class*="css"] {
 
 .stApp {
     background: var(--surface) !important;
+    color: var(--text-primary) !important;
+}
+
+/* Force dark text on main content */
+.stApp .stMainBlockContainer,
+.stApp .stMainBlockContainer * {
+    color: var(--text-primary);
+}
+.stApp .stMainBlockContainer p,
+.stApp .stMainBlockContainer span,
+.stApp .stMainBlockContainer h1,
+.stApp .stMainBlockContainer h2,
+.stApp .stMainBlockContainer h3,
+.stApp .stMainBlockContainer h4,
+.stApp .stMainBlockContainer strong,
+.stApp .stMainBlockContainer div {
+    color: var(--text-primary) !important;
+}
+.stApp .stMainBlockContainer .stCaption,
+.stApp .stMainBlockContainer .stCaption * {
+    color: var(--text-secondary) !important;
 }
 
 /* ---- Hide default Streamlit branding ---- */
@@ -201,21 +222,24 @@ section[data-testid="stSidebar"] .stButton > button:hover {
     background: radial-gradient(circle, var(--teal-glow) 0%, transparent 70%);
     border-radius: 50%;
 }
+.hero-banner, .hero-banner * {
+    color: #ffffff !important;
+}
 .hero-banner h1 {
-    color: #ffffff;
+    color: #ffffff !important;
     font-size: 2rem;
     font-weight: 700;
     margin: 0 0 0.5rem 0;
     position: relative;
 }
 .hero-banner p {
-    color: #94a3b8;
+    color: #94a3b8 !important;
     font-size: 1.05rem;
     margin: 0;
     position: relative;
 }
 .hero-banner .accent {
-    color: var(--teal);
+    color: var(--teal) !important;
     font-weight: 600;
 }
 
@@ -304,12 +328,20 @@ div[data-testid="stVerticalBlock"] > div[data-testid="stContainer"]:hover {
 .results-count {
     display: inline-block;
     background: var(--navy);
-    color: white;
+    color: white !important;
     padding: 0.4rem 1rem;
     border-radius: 20px;
     font-size: 0.85rem;
     font-weight: 500;
     margin-bottom: 1rem;
+}
+
+/* ---- Stat cards text ---- */
+.stat-card .stat-value {
+    color: var(--teal) !important;
+}
+.stat-card .stat-label {
+    color: var(--text-secondary) !important;
 }
 
 /* ---- Powered by footer ---- */
@@ -554,16 +586,18 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# Search input
-query = st.text_input(
-    "What are you looking for?",
-    placeholder="e.g., inventory management, mobile app development, healthcare platform",
-    label_visibility="collapsed",
-)
-
-col1, col2, col3 = st.columns([1, 1, 4])
-with col1:
-    top_k = st.selectbox("Results to show", [3, 5, 10], index=1)
+# Search input — all on one line
+search_col1, search_col2, search_col3 = st.columns([5, 1, 1])
+with search_col1:
+    query = st.text_input(
+        "Search",
+        placeholder="e.g., inventory management, mobile app development, healthcare platform",
+        label_visibility="collapsed",
+    )
+with search_col2:
+    top_k = st.selectbox("Results", [3, 5, 10], index=1, label_visibility="collapsed")
+with search_col3:
+    search_clicked = st.button("Search", use_container_width=True)
 
 # Search
 if query:
