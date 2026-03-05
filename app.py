@@ -673,7 +673,7 @@ if query:
                     st.markdown(
                         f'<span style="background:rgba(0,191,166,0.15); color:#009e8c; '
                         f'font-weight:700; font-size:0.85rem; padding:0.3rem 0.75rem; '
-                        f'border-radius:20px; white-space:nowrap;">{r["relevance_score"]}%</span>',
+                        f'border-radius:20px; white-space:nowrap;">Relevance {r["relevance_score"]}%</span>',
                         unsafe_allow_html=True,
                     )
 
