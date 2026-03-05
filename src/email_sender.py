@@ -6,7 +6,7 @@ from email.mime.multipart import MIMEMultipart
 from googleapiclient.discovery import build
 from jinja2 import Environment, FileSystemLoader
 
-from src.config import GOOGLE_TOKEN_FILE, GOOGLE_SCOPES, TEMPLATES_DIR, TARGET_EMAIL, PERPLEXITY_MODEL
+from src.config import GOOGLE_TOKEN_FILE, GOOGLE_SCOPES, TEMPLATES_DIR, TARGET_EMAIL, ANTHROPIC_MODEL
 from src.google_calendar import authenticate
 from src.models import DailyBrief, MeetingBrief
 
@@ -26,7 +26,7 @@ def render_email(daily_brief: DailyBrief) -> str:
         meeting_count=len(daily_brief.meeting_briefs),
         target_date=daily_brief.target_date.strftime("%A, %B %d, %Y"),
         generated_at=daily_brief.generated_at.strftime("%I:%M %p on %B %d, %Y"),
-        ai_model=PERPLEXITY_MODEL,
+        ai_model=ANTHROPIC_MODEL,
     )
 
 
@@ -84,7 +84,7 @@ def render_meeting_email(meeting_brief: MeetingBrief, target_date) -> str:
         meeting_count=1,
         target_date=target_date.strftime("%A, %B %d, %Y"),
         generated_at=__import__("datetime").datetime.now().strftime("%I:%M %p on %B %d, %Y"),
-        ai_model=PERPLEXITY_MODEL,
+        ai_model=ANTHROPIC_MODEL,
     )
 
 

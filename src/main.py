@@ -13,7 +13,7 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-import requests
+import anthropic
 
 from src.config import LOGS_DIR
 from src.models import AttendeeInsight, DailyBrief, MeetingBrief
@@ -88,13 +88,13 @@ def run_prep(target_date: date) -> None:
         else:
             enrichments[name] = None
 
-    # --- Stage 3: Research with Perplexity AI (skipped if no API key) ---
-    from src.config import PERPLEXITY_API_KEY
+    # --- Stage 3: Research with Claude AI (skipped if no API key) ---
+    from src.config import ANTHROPIC_API_KEY
 
-    _use_ai = bool(PERPLEXITY_API_KEY)
+    _use_ai = bool(ANTHROPIC_API_KEY)
 
     if _use_ai:
-        logger.info("Stage 3: Researching attendees with Perplexity AI...")
+        logger.info("Stage 3: Researching attendees with Claude AI (web search)...")
         from src.research import research_attendee, synthesize_meeting_brief
 
         try:
@@ -111,17 +111,16 @@ def run_prep(target_date: date) -> None:
                 meeting_briefs.append(brief)
                 logger.info("  Synthesized brief for: %s", meeting.title)
 
-        except requests.exceptions.HTTPError as e:
-            status = e.response.status_code if e.response is not None else "?"
+        except anthropic.AuthenticationError as e:
             logger.warning(
-                "Stage 3: Perplexity API error (HTTP %s) — "
-                "falling back to ZoomInfo-only briefs.", status
+                "Stage 3: Anthropic API auth error — "
+                "falling back to ZoomInfo-only briefs. %s", e
             )
             _use_ai = False
 
     if not _use_ai:
-        if not PERPLEXITY_API_KEY:
-            logger.info("Stage 3: Skipping AI research (PERPLEXITY_API_KEY not set)...")
+        if not ANTHROPIC_API_KEY:
+            logger.info("Stage 3: Skipping AI research (ANTHROPIC_API_KEY not set)...")
         # Build basic insights from ZoomInfo data only
         insights_by_name = {
             name: AttendeeInsight(
