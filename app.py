@@ -1,6 +1,5 @@
 """Streamlit app for searching case studies via Voyage AI + Supabase pgvector."""
 
-import base64
 import os
 import smtplib
 from email.mime.text import MIMEText
@@ -36,10 +35,311 @@ SMTP_PASSWORD = _get_secret("SMTP_PASSWORD")
 STORAGE_BUCKET = "case-studies"
 
 st.set_page_config(
-    page_title="Case Study Search",
-    page_icon="🔍",
+    page_title="Case Study Search | Cloud Chillies",
+    page_icon="https://cloudchillies.com/favicon.ico",
     layout="wide",
 )
+
+# --- Custom CSS for modern sleek look ---
+st.markdown("""
+<style>
+/* ---- Google Font ---- */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* ---- Root variables ---- */
+:root {
+    --navy: #0f1b2d;
+    --navy-light: #1a2d47;
+    --teal: #00bfa6;
+    --teal-dark: #009e8c;
+    --teal-glow: rgba(0, 191, 166, 0.15);
+    --surface: #f8f9fc;
+    --card-bg: #ffffff;
+    --text-primary: #1a1a2e;
+    --text-secondary: #64748b;
+    --border: #e2e8f0;
+    --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+    --shadow-lg: 0 10px 25px rgba(0,0,0,0.1);
+    --radius: 12px;
+}
+
+/* ---- Global ---- */
+html, body, [class*="css"] {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+}
+
+.stApp {
+    background: var(--surface) !important;
+}
+
+/* ---- Hide default Streamlit branding ---- */
+#MainMenu, footer, header {visibility: hidden;}
+
+/* ---- Sidebar ---- */
+section[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, var(--navy) 0%, var(--navy-light) 100%) !important;
+}
+section[data-testid="stSidebar"] * {
+    color: #e2e8f0 !important;
+}
+section[data-testid="stSidebar"] .stButton > button {
+    background: rgba(255,255,255,0.08) !important;
+    border: 1px solid rgba(255,255,255,0.15) !important;
+    color: #e2e8f0 !important;
+    border-radius: 8px !important;
+    transition: all 0.2s ease !important;
+}
+section[data-testid="stSidebar"] .stButton > button:hover {
+    background: rgba(255,255,255,0.15) !important;
+    border-color: var(--teal) !important;
+}
+
+/* ---- Buttons ---- */
+.stButton > button {
+    background: linear-gradient(135deg, var(--teal), var(--teal-dark)) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    padding: 0.5rem 1.5rem !important;
+    transition: all 0.25s ease !important;
+    box-shadow: 0 2px 8px rgba(0, 191, 166, 0.3) !important;
+}
+.stButton > button:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 16px rgba(0, 191, 166, 0.4) !important;
+}
+
+/* Form submit button */
+.stFormSubmitButton > button {
+    background: linear-gradient(135deg, var(--teal), var(--teal-dark)) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    font-size: 1rem !important;
+    padding: 0.6rem 2rem !important;
+    box-shadow: 0 2px 8px rgba(0, 191, 166, 0.3) !important;
+    transition: all 0.25s ease !important;
+}
+.stFormSubmitButton > button:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 16px rgba(0, 191, 166, 0.4) !important;
+}
+
+/* ---- Text inputs ---- */
+.stTextInput > div > div > input {
+    border-radius: 8px !important;
+    border: 1.5px solid var(--border) !important;
+    padding: 0.65rem 1rem !important;
+    font-size: 0.95rem !important;
+    transition: border-color 0.2s ease !important;
+    background: white !important;
+}
+.stTextInput > div > div > input:focus {
+    border-color: var(--teal) !important;
+    box-shadow: 0 0 0 3px var(--teal-glow) !important;
+}
+
+/* ---- Select box ---- */
+.stSelectbox > div > div {
+    border-radius: 8px !important;
+}
+
+/* ---- Metric ---- */
+[data-testid="stMetricValue"] {
+    color: var(--teal) !important;
+    font-weight: 700 !important;
+}
+
+/* ---- Alerts ---- */
+.stAlert > div {
+    border-radius: var(--radius) !important;
+    border: none !important;
+}
+
+/* ---- Hero banner (injected via markdown) ---- */
+.hero-banner {
+    background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 60%, #1e3a5f 100%);
+    border-radius: 16px;
+    padding: 2.5rem 2rem;
+    margin-bottom: 1.5rem;
+    position: relative;
+    overflow: hidden;
+}
+.hero-banner::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, var(--teal-glow) 0%, transparent 70%);
+    border-radius: 50%;
+}
+.hero-banner h1 {
+    color: #ffffff;
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem 0;
+    position: relative;
+}
+.hero-banner p {
+    color: #94a3b8;
+    font-size: 1.05rem;
+    margin: 0;
+    position: relative;
+}
+.hero-banner .accent {
+    color: var(--teal);
+    font-weight: 600;
+}
+
+/* ---- Result card ---- */
+.result-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    transition: all 0.25s ease;
+}
+.result-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+    border-color: var(--teal);
+}
+.result-card .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.75rem;
+}
+.result-card .card-title {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+}
+.result-card .card-badge {
+    background: var(--teal-glow);
+    color: var(--teal-dark);
+    font-weight: 700;
+    font-size: 0.85rem;
+    padding: 0.3rem 0.75rem;
+    border-radius: 20px;
+    white-space: nowrap;
+}
+.result-card .card-meta {
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+    margin-bottom: 0.75rem;
+}
+.result-card .card-summary {
+    color: var(--text-primary);
+    font-size: 0.92rem;
+    line-height: 1.65;
+    margin-bottom: 1rem;
+}
+.result-card .card-actions a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: linear-gradient(135deg, var(--teal), var(--teal-dark));
+    color: white !important;
+    text-decoration: none;
+    padding: 0.4rem 1rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 6px rgba(0, 191, 166, 0.25);
+}
+.result-card .card-actions a:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 191, 166, 0.35);
+}
+
+/* ---- Login card ---- */
+.login-card {
+    background: var(--card-bg);
+    border-radius: 16px;
+    padding: 2.5rem;
+    box-shadow: var(--shadow-lg);
+    max-width: 420px;
+    margin: 3rem auto;
+    border: 1px solid var(--border);
+}
+.login-card h2 {
+    text-align: center;
+    color: var(--navy);
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+}
+.login-card .subtitle {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+}
+
+/* ---- Stats row ---- */
+.stats-row {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+.stat-card {
+    flex: 1;
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    text-align: center;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+}
+.stat-card .stat-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--teal);
+}
+.stat-card .stat-label {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
+}
+
+/* ---- Results count badge ---- */
+.results-count {
+    display: inline-block;
+    background: var(--navy);
+    color: white;
+    padding: 0.4rem 1rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin-bottom: 1rem;
+}
+
+/* ---- Powered by footer ---- */
+.powered-by {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+}
+
+/* ---- Scrollbar styling ---- */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+</style>
+""", unsafe_allow_html=True)
 
 
 # --- Authentication ---
@@ -49,38 +349,55 @@ def check_login():
     if st.session_state.get("authenticated"):
         return True
 
-    st.title("Case Study Search")
-    st.markdown("Please log in to continue.")
+    # Centered login layout
+    col_l, col_c, col_r = st.columns([1, 2, 1])
+    with col_c:
+        st.markdown("""
+        <div style="text-align:center; margin-top: 2rem; margin-bottom: 1rem;">
+            <h1 style="color: #0f1b2d; font-size: 1.8rem; font-weight: 700; margin-bottom: 0.25rem;">
+                Case Study Search
+            </h1>
+            <p style="color: #64748b; font-size: 0.95rem;">
+                AI-powered semantic search across your case study library
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
 
-    # Toggle between login and forgot password
-    if st.session_state.get("show_forgot_password"):
-        _forgot_password_form()
-    else:
-        _login_form()
+        if st.session_state.get("show_forgot_password"):
+            _forgot_password_form()
+        else:
+            _login_form()
+
+        st.markdown("""
+        <div class="powered-by">
+            Powered by Voyage AI & Supabase
+        </div>
+        """, unsafe_allow_html=True)
 
     return False
 
 
 def _login_form():
     with st.form("login_form"):
-        username = st.text_input("Username")
-        password = st.text_input("Password", type="password")
-        submitted = st.form_submit_button("Log in", use_container_width=True)
+        st.text_input("Username", key="login_username")
+        st.text_input("Password", type="password", key="login_password")
+        submitted = st.form_submit_button("Sign In", use_container_width=True)
 
         if submitted:
-            if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
+            if (st.session_state.login_username == ADMIN_USERNAME
+                    and st.session_state.login_password == ADMIN_PASSWORD):
                 st.session_state["authenticated"] = True
                 st.rerun()
             else:
                 st.error("Invalid username or password.")
 
-    if st.button("Forgot Password?"):
+    if st.button("Forgot Password?", use_container_width=True):
         st.session_state["show_forgot_password"] = True
         st.rerun()
 
 
 def _forgot_password_form():
-    st.subheader("Password Recovery")
+    st.markdown("##### Password Recovery")
 
     with st.form("forgot_password_form"):
         email = st.text_input("Enter your recovery email address")
@@ -95,7 +412,7 @@ def _forgot_password_form():
             else:
                 st.error("Email address does not match the recovery email on file.")
 
-    if st.button("Back to Login"):
+    if st.button("Back to Sign In", use_container_width=True):
         st.session_state["show_forgot_password"] = False
         st.rerun()
 
@@ -139,13 +456,15 @@ if not check_login():
 
 # --- Authenticated content below ---
 
-st.title("Case Study Search")
-st.markdown("Search across **133 case studies** using AI-powered semantic search with reranking.")
-
-# Logout button in sidebar
+# Sidebar
 with st.sidebar:
-    st.markdown(f"Logged in as **{ADMIN_USERNAME}**")
-    if st.button("Logout"):
+    st.markdown(f"""
+    <div style="padding: 1rem 0;">
+        <div style="font-size: 0.82rem; color: #94a3b8; margin-bottom: 0.25rem;">Signed in as</div>
+        <div style="font-weight: 600; font-size: 1rem;">{ADMIN_USERNAME}</div>
+    </div>
+    """, unsafe_allow_html=True)
+    if st.button("Sign Out", use_container_width=True):
         st.session_state["authenticated"] = False
         st.rerun()
 
@@ -211,18 +530,37 @@ def search(query: str, top_k: int = 5) -> list[dict]:
 
 # --- Check config ---
 if not SUPABASE_URL or not SUPABASE_SERVICE_KEY or not VOYAGE_API_KEY:
-    st.error("Missing environment variables. Set SUPABASE_URL, SUPABASE_SERVICE_KEY, and VOYAGE_API_KEY in .env")
+    st.error("Missing environment variables. Set SUPABASE_URL, SUPABASE_SERVICE_KEY, and VOYAGE_API_KEY.")
     st.stop()
+
+# Get total count for hero banner
+total_count = 133
+try:
+    supabase, _ = get_clients()
+    count_resp = supabase.table("case_studies").select("id", count="exact").execute()
+    total_count = count_resp.count if count_resp.count else len(count_resp.data)
+except Exception:
+    pass
+
+# Hero banner
+st.markdown(f"""
+<div class="hero-banner">
+    <h1>Case Study Search</h1>
+    <p>Search across <span class="accent">{total_count} case studies</span> using AI-powered
+    semantic search with cross-encoder reranking</p>
+</div>
+""", unsafe_allow_html=True)
 
 # Search input
 query = st.text_input(
     "What are you looking for?",
     placeholder="e.g., inventory management, mobile app development, healthcare platform",
+    label_visibility="collapsed",
 )
 
-col1, col2 = st.columns([1, 4])
+col1, col2, col3 = st.columns([1, 1, 4])
 with col1:
-    top_k = st.selectbox("Results", [3, 5, 10], index=1)
+    top_k = st.selectbox("Results to show", [3, 5, 10], index=1)
 
 # Search
 if query:
@@ -232,45 +570,76 @@ if query:
     if not results:
         st.warning("No matching case studies found. Try a broader query.")
     else:
-        st.markdown(f"**{len(results)} results** for: *{query}*")
-        st.divider()
+        st.markdown(
+            f'<div class="results-count">{len(results)} results for "{query}"</div>',
+            unsafe_allow_html=True,
+        )
 
         for i, r in enumerate(results, 1):
-            with st.container():
-                title = r["company_name"]
-                if r["use_case"]:
-                    title += f" — {r['use_case']}"
+            title = r["company_name"]
+            if r["use_case"]:
+                title += f" — {r['use_case']}"
 
-                col_title, col_score = st.columns([4, 1])
-                with col_title:
-                    st.subheader(f"{i}. {title}")
-                with col_score:
-                    st.metric("Relevance", f"{r['relevance_score']}%")
+            meta_parts = []
+            if r["doc_type"]:
+                meta_parts.append(r["doc_type"])
+            meta_parts.append(r["filename"])
+            meta_text = " &middot; ".join(meta_parts)
 
-                if r["doc_type"]:
-                    st.caption(f"Type: {r['doc_type']}  |  File: {r['filename']}")
-                else:
-                    st.caption(f"File: {r['filename']}")
+            # Try to get signed download URL
+            download_html = ""
+            try:
+                supabase, _ = get_clients()
+                signed = supabase.storage.from_(STORAGE_BUCKET).create_signed_url(
+                    r["filename"], 3600
+                )
+                if signed and signed.get("signedURL"):
+                    download_html = f'''
+                    <div class="card-actions">
+                        <a href="{signed['signedURL']}" target="_blank">
+                            Download PDF
+                        </a>
+                    </div>
+                    '''
+            except Exception:
+                pass
 
-                st.write(r["summary"])
+            st.markdown(f"""
+            <div class="result-card">
+                <div class="card-header">
+                    <h3 class="card-title">{i}. {title}</h3>
+                    <span class="card-badge">{r['relevance_score']}%</span>
+                </div>
+                <div class="card-meta">{meta_text}</div>
+                <div class="card-summary">{r['summary']}</div>
+                {download_html}
+            </div>
+            """, unsafe_allow_html=True)
 
-                try:
-                    supabase, _ = get_clients()
-                    signed = supabase.storage.from_(STORAGE_BUCKET).create_signed_url(
-                        r["filename"], 3600
-                    )
-                    if signed and signed.get("signedURL"):
-                        st.markdown(f"[Download PDF]({signed['signedURL']})")
-                except Exception:
-                    pass
-
-                st.divider()
 else:
-    # Show total count on load
-    try:
-        supabase, _ = get_clients()
-        count_resp = supabase.table("case_studies").select("id", count="exact").execute()
-        total = count_resp.count if count_resp.count else len(count_resp.data)
-        st.info(f"Ready to search across **{total}** case studies. Enter a query above to get started.")
-    except Exception:
-        st.info("Enter a query above to search case studies.")
+    # Welcome state — stats cards
+    st.markdown(f"""
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="stat-value">{total_count}</div>
+            <div class="stat-label">Case Studies</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">AI</div>
+            <div class="stat-label">Semantic Search</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">2-Stage</div>
+            <div class="stat-label">Vector + Reranking</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.info("Enter a query above to search across your case study library.")
+
+# Footer
+st.markdown("""
+<div class="powered-by">
+    Powered by Voyage AI embeddings, Supabase pgvector & cross-encoder reranking
+</div>
+""", unsafe_allow_html=True)
