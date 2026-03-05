@@ -247,6 +247,8 @@ section[data-testid="stSidebar"] .stButton > button:hover {
     border-radius: 16px;
     padding: 2.5rem 2rem;
     margin-bottom: 1.5rem;
+    margin-left: -4rem;
+    margin-right: -4rem;
     position: relative;
     overflow: hidden;
 }
@@ -260,6 +262,7 @@ section[data-testid="stSidebar"] .stButton > button:hover {
     background: radial-gradient(circle, var(--teal-glow) 0%, transparent 70%);
     border-radius: 50%;
 }
+
 .hero-banner, .hero-banner * {
     color: #ffffff !important;
 }
@@ -440,7 +443,7 @@ def check_login():
 
 def _login_form():
     with st.form("login_form"):
-        st.text_input("Username", key="login_username")
+        st.text_input("Username", value="admin", key="login_username")
         st.text_input("Password", type="password", key="login_password")
 
         btn_c1, btn_c2 = st.columns(2)
@@ -459,6 +462,14 @@ def _login_form():
         if forgot:
             st.session_state["show_forgot_password"] = True
             st.rerun()
+
+    # Autofocus the password field
+    st.components.v1.html("""
+    <script>
+    const passInputs = window.parent.document.querySelectorAll('input[type="password"]');
+    if (passInputs.length > 0) passInputs[0].focus();
+    </script>
+    """, height=0)
 
 
 def _forgot_password_form():
@@ -613,25 +624,18 @@ try:
 except Exception:
     pass
 
-# Hero banner with logout
-banner_col1, banner_col2 = st.columns([6, 1])
-with banner_col1:
-    st.markdown(f"""
-    <div class="hero-banner">
-        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.75rem; position: relative;">
-            <img src="https://cloudchillies.com/img/logo.svg" alt="Cloud Chillies"
-                 style="height: 32px; filter: brightness(0) invert(1); opacity: 0.9;" />
-        </div>
-        <h1>Case Study Search</h1>
-        <p>Search across <span class="accent">{total_count} case studies</span> using AI-powered
-        semantic search with cross-encoder reranking</p>
+# Hero banner
+st.markdown(f"""
+<div class="hero-banner">
+    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.75rem; position: relative;">
+        <img src="https://cloudchillies.com/img/logo.svg" alt="Cloud Chillies"
+             style="height: 32px; filter: brightness(0) invert(1); opacity: 0.9;" />
     </div>
-    """, unsafe_allow_html=True)
-with banner_col2:
-    st.markdown("<div style='height: 1rem;'></div>", unsafe_allow_html=True)
-    if st.button("Logout", use_container_width=True):
-        st.session_state["authenticated"] = False
-        st.rerun()
+    <h1>Case Study Search</h1>
+    <p>Search across <span class="accent">{total_count} case studies</span> using AI-powered
+    semantic search with cross-encoder reranking</p>
+</div>
+""", unsafe_allow_html=True)
 
 # Search input — all on one line
 search_col1, search_col2, search_col3 = st.columns([5, 1, 1])
