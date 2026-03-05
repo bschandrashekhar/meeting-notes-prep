@@ -160,15 +160,14 @@ section[data-testid="stSidebar"] .stButton > button:hover {
 .stForm [data-testid="stHorizontalBlock"] .stFormSubmitButton:last-child > button {
     background: transparent !important;
     color: var(--teal) !important;
+    border: 1.5px solid var(--teal) !important;
     box-shadow: none !important;
-    font-weight: 500 !important;
-    text-decoration: underline !important;
-    border: none !important;
+    font-weight: 600 !important;
 }
 .stForm [data-testid="stHorizontalBlock"] .stFormSubmitButton:last-child > button:hover {
-    background: transparent !important;
+    background: var(--teal-glow) !important;
     color: var(--teal-dark) !important;
-    transform: none !important;
+    border-color: var(--teal-dark) !important;
     box-shadow: none !important;
 }
 
