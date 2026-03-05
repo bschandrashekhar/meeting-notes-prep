@@ -613,18 +613,25 @@ try:
 except Exception:
     pass
 
-# Hero banner
-st.markdown(f"""
-<div class="hero-banner">
-    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.75rem; position: relative;">
-        <img src="https://cloudchillies.com/img/logo.svg" alt="Cloud Chillies"
-             style="height: 32px; filter: brightness(0) invert(1); opacity: 0.9;" />
+# Hero banner with logout
+banner_col1, banner_col2 = st.columns([6, 1])
+with banner_col1:
+    st.markdown(f"""
+    <div class="hero-banner">
+        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.75rem; position: relative;">
+            <img src="https://cloudchillies.com/img/logo.svg" alt="Cloud Chillies"
+                 style="height: 32px; filter: brightness(0) invert(1); opacity: 0.9;" />
+        </div>
+        <h1>Case Study Search</h1>
+        <p>Search across <span class="accent">{total_count} case studies</span> using AI-powered
+        semantic search with cross-encoder reranking</p>
     </div>
-    <h1>Case Study Search</h1>
-    <p>Search across <span class="accent">{total_count} case studies</span> using AI-powered
-    semantic search with cross-encoder reranking</p>
-</div>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
+with banner_col2:
+    st.markdown("<div style='height: 1rem;'></div>", unsafe_allow_html=True)
+    if st.button("Logout", use_container_width=True):
+        st.session_state["authenticated"] = False
+        st.rerun()
 
 # Search input — all on one line
 search_col1, search_col2, search_col3 = st.columns([5, 1, 1])
