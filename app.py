@@ -74,23 +74,39 @@ html, body, [class*="css"] {
     color: var(--text-primary) !important;
 }
 
-/* Force dark text on main content */
-.stApp .stMainBlockContainer,
-.stApp .stMainBlockContainer * {
-    color: var(--text-primary);
-}
-.stApp .stMainBlockContainer p,
-.stApp .stMainBlockContainer span,
-.stApp .stMainBlockContainer h1,
-.stApp .stMainBlockContainer h2,
-.stApp .stMainBlockContainer h3,
-.stApp .stMainBlockContainer h4,
-.stApp .stMainBlockContainer strong,
-.stApp .stMainBlockContainer div {
+/* Force dark text on main Streamlit widgets only */
+.stApp .stMainBlockContainer .stMarkdown p,
+.stApp .stMainBlockContainer .stMarkdown span,
+.stApp .stMainBlockContainer .stMarkdown strong,
+.stApp .stMainBlockContainer .stMarkdown h1,
+.stApp .stMainBlockContainer .stMarkdown h2,
+.stApp .stMainBlockContainer .stMarkdown h3,
+.stApp .stMainBlockContainer .stMarkdown h4 {
     color: var(--text-primary) !important;
 }
 .stApp .stMainBlockContainer .stCaption,
 .stApp .stMainBlockContainer .stCaption * {
+    color: var(--text-secondary) !important;
+}
+/* Override: hero-banner must keep its own colors */
+.stApp .stMainBlockContainer .hero-banner h1,
+.stApp .stMainBlockContainer .hero-banner p,
+.stApp .stMainBlockContainer .hero-banner span,
+.stApp .stMainBlockContainer .hero-banner div {
+    color: #ffffff !important;
+}
+.stApp .stMainBlockContainer .hero-banner p {
+    color: #94a3b8 !important;
+}
+.stApp .stMainBlockContainer .hero-banner .accent {
+    color: var(--teal) !important;
+}
+/* Override: results-count badge */
+.stApp .stMainBlockContainer .results-count {
+    color: white !important;
+}
+/* Override: powered-by footer */
+.stApp .stMainBlockContainer .powered-by {
     color: var(--text-secondary) !important;
 }
 
@@ -189,6 +205,29 @@ section[data-testid="stSidebar"] .stButton > button:hover {
 /* ---- Select box ---- */
 .stSelectbox > div > div {
     border-radius: 8px !important;
+    background: #ffffff !important;
+    color: #1a1a2e !important;
+}
+.stSelectbox > div > div > div,
+.stSelectbox [data-baseweb="select"] > div {
+    background: #ffffff !important;
+    color: #1a1a2e !important;
+    -webkit-text-fill-color: #1a1a2e !important;
+}
+.stSelectbox [data-baseweb="select"] span {
+    color: #1a1a2e !important;
+    -webkit-text-fill-color: #1a1a2e !important;
+}
+/* Dropdown menu items */
+[data-baseweb="menu"] {
+    background: #ffffff !important;
+}
+[data-baseweb="menu"] li {
+    color: #1a1a2e !important;
+    background: #ffffff !important;
+}
+[data-baseweb="menu"] li:hover {
+    background: var(--teal-glow) !important;
 }
 
 /* ---- Metric ---- */
