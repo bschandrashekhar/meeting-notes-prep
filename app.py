@@ -400,6 +400,33 @@ div[data-testid="stVerticalBlock"] > div[data-testid="stContainer"]:hover {
     border-top: 1px solid var(--border);
 }
 
+/* ---- Sidebar expander (Change Password) ---- */
+section[data-testid="stSidebar"] .stExpander {
+    background: rgba(255,255,255,0.06) !important;
+    border: 1px solid rgba(255,255,255,0.12) !important;
+    border-radius: 8px !important;
+}
+section[data-testid="stSidebar"] .stExpander summary,
+section[data-testid="stSidebar"] .stExpander summary span,
+section[data-testid="stSidebar"] .stExpander summary p,
+section[data-testid="stSidebar"] .stExpander [data-testid="stExpanderToggleIcon"] {
+    color: #e2e8f0 !important;
+    font-weight: 500 !important;
+}
+section[data-testid="stSidebar"] .stExpander details[open] {
+    background: rgba(255,255,255,0.04) !important;
+}
+/* Sidebar form inputs need dark text on light bg */
+section[data-testid="stSidebar"] .stExpander .stTextInput input {
+    background: rgba(255,255,255,0.9) !important;
+    color: #1a1a2e !important;
+    -webkit-text-fill-color: #1a1a2e !important;
+    border-color: rgba(255,255,255,0.25) !important;
+}
+section[data-testid="stSidebar"] .stExpander .stTextInput label {
+    color: #cbd5e1 !important;
+}
+
 /* ---- Tabs ---- */
 .stTabs [data-baseweb="tab-list"] {
     gap: 0 !important;
