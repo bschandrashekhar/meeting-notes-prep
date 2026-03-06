@@ -1,5 +1,7 @@
 """Streamlit app for searching case studies via Voyage AI + Supabase pgvector."""
 
+import hashlib
+import hmac
 import json
 import os
 import smtplib
@@ -414,23 +416,31 @@ div[data-testid="stVerticalBlock"] > div[data-testid="stContainer"]:hover {
     padding: 0.6rem 1.5rem !important;
     font-weight: 600 !important;
     font-size: 0.9rem !important;
-    color: var(--text-secondary) !important;
     background: transparent !important;
     border: none !important;
     transition: all 0.2s ease !important;
 }
-.stTabs [data-baseweb="tab"]:hover {
+/* Inactive tab text */
+.stTabs [data-baseweb="tab"] p,
+.stTabs [data-baseweb="tab"] span,
+.stTabs [data-baseweb="tab"] {
+    color: var(--text-secondary) !important;
+}
+.stTabs [data-baseweb="tab"]:hover,
+.stTabs [data-baseweb="tab"]:hover p,
+.stTabs [data-baseweb="tab"]:hover span {
     color: var(--teal-dark) !important;
     background: var(--teal-glow) !important;
 }
-.stTabs [aria-selected="true"] {
+/* Active tab */
+.stTabs [aria-selected="true"],
+.stTabs [aria-selected="true"] p,
+.stTabs [aria-selected="true"] span {
     background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%) !important;
     color: #ffffff !important;
     box-shadow: 0 2px 8px rgba(15, 27, 45, 0.25) !important;
 }
-.stTabs [data-baseweb="tab-highlight"] {
-    display: none !important;
-}
+.stTabs [data-baseweb="tab-highlight"],
 .stTabs [data-baseweb="tab-border"] {
     display: none !important;
 }
@@ -446,9 +456,21 @@ div[data-testid="stVerticalBlock"] > div[data-testid="stContainer"]:hover {
 
 # --- Authentication ---
 
+def _make_auth_token() -> str:
+    """Create a hash token for session persistence across refreshes."""
+    raw = f"{ADMIN_USERNAME}:{ADMIN_PASSWORD}:css-auth".encode()
+    return hmac.new(b"case-study-search", raw, hashlib.sha256).hexdigest()[:16]
+
+
 def check_login():
     """Show login form and gate access."""
     if st.session_state.get("authenticated"):
+        return True
+
+    # Check query params for auth token (survives page refresh)
+    token = st.query_params.get("auth")
+    if token and token == _make_auth_token():
+        st.session_state["authenticated"] = True
         return True
 
     # Centered login layout
@@ -496,6 +518,7 @@ def _login_form():
             if (st.session_state.login_username == ADMIN_USERNAME
                     and st.session_state.login_password == ADMIN_PASSWORD):
                 st.session_state["authenticated"] = True
+                st.query_params["auth"] = _make_auth_token()
                 st.rerun()
             else:
                 st.error("Invalid username or password.")
@@ -588,6 +611,8 @@ with st.sidebar:
     """, unsafe_allow_html=True)
     if st.button("Sign Out", use_container_width=True):
         st.session_state["authenticated"] = False
+        if "auth" in st.query_params:
+            del st.query_params["auth"]
         st.rerun()
 
 
