@@ -454,11 +454,53 @@ div[data-testid="stVerticalBlock"] > div[data-testid="stContainer"]:hover {
 """, unsafe_allow_html=True)
 
 
+@st.cache_resource
+def get_clients():
+    supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+    voyage = voyageai.Client(api_key=VOYAGE_API_KEY)
+    return supabase, voyage
+
+
 # --- Authentication ---
+
+def _hash_password(password: str) -> str:
+    """Hash a password for storage."""
+    return hashlib.sha256(f"css-salt:{password}".encode()).hexdigest()
+
+
+def _get_stored_password_hash() -> str | None:
+    """Get password hash from Supabase app_settings."""
+    try:
+        supabase, _ = get_clients()
+        resp = supabase.table("app_settings").select("value").eq("key", "admin_password_hash").execute()
+        if resp.data:
+            return resp.data[0]["value"]
+    except Exception:
+        pass
+    return None
+
+
+def _set_stored_password(password: str):
+    """Store hashed password in Supabase app_settings."""
+    supabase, _ = get_clients()
+    supabase.table("app_settings").upsert({
+        "key": "admin_password_hash",
+        "value": _hash_password(password),
+    }).execute()
+
+
+def _verify_password(password: str) -> bool:
+    """Verify password against Supabase store, fall back to env var."""
+    stored_hash = _get_stored_password_hash()
+    if stored_hash:
+        return _hash_password(password) == stored_hash
+    return password == ADMIN_PASSWORD
+
 
 def _make_auth_token() -> str:
     """Create a hash token for session persistence across refreshes."""
-    raw = f"{ADMIN_USERNAME}:{ADMIN_PASSWORD}:css-auth".encode()
+    stored_hash = _get_stored_password_hash() or ADMIN_PASSWORD
+    raw = f"{ADMIN_USERNAME}:{stored_hash}:css-auth".encode()
     return hmac.new(b"case-study-search", raw, hashlib.sha256).hexdigest()[:16]
 
 
@@ -516,7 +558,7 @@ def _login_form():
 
         if submitted:
             if (st.session_state.login_username == ADMIN_USERNAME
-                    and st.session_state.login_password == ADMIN_PASSWORD):
+                    and _verify_password(st.session_state.login_password)):
                 st.session_state["authenticated"] = True
                 st.query_params["auth"] = _make_auth_token()
                 st.rerun()
@@ -615,12 +657,29 @@ with st.sidebar:
             del st.query_params["auth"]
         st.rerun()
 
+    st.markdown("<div style='margin-top: 1rem;'></div>", unsafe_allow_html=True)
+    with st.expander("Change Password"):
+        with st.form("change_password_form"):
+            current_pw = st.text_input("Current Password", type="password", key="cp_current")
+            new_pw = st.text_input("New Password", type="password", key="cp_new")
+            confirm_pw = st.text_input("Confirm New Password", type="password", key="cp_confirm")
+            change_submitted = st.form_submit_button("Update Password", use_container_width=True)
 
-@st.cache_resource
-def get_clients():
-    supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-    voyage = voyageai.Client(api_key=VOYAGE_API_KEY)
-    return supabase, voyage
+            if change_submitted:
+                if not _verify_password(current_pw):
+                    st.error("Current password is incorrect.")
+                elif len(new_pw) < 4:
+                    st.error("New password must be at least 4 characters.")
+                elif new_pw != confirm_pw:
+                    st.error("New passwords do not match.")
+                else:
+                    try:
+                        _set_stored_password(new_pw)
+                        # Refresh auth token
+                        st.query_params["auth"] = _make_auth_token()
+                        st.success("Password updated.")
+                    except Exception as e:
+                        st.error(f"Failed to update: {e}")
 
 
 def generate_conversation_flow(agenda: str, case_studies: list[dict]) -> list[str]:
