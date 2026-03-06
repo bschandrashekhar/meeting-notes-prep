@@ -759,22 +759,6 @@ if query:
                 except Exception:
                     pass
 
-        # Conversation Flow section
-        with st.spinner("Generating conversation flow..."):
-            flow_steps = generate_conversation_flow(query, results)
-
-        if flow_steps:
-            st.markdown(
-                '<div style="margin-top: 1.5rem; background: linear-gradient(135deg, #f5f0ff 0%, #ede7f6 100%); '
-                'border-radius: 12px; border: 1px solid #d1c4e9; padding: 1.5rem 1.75rem;">'
-                '<p style="margin: 0 0 0.75rem; font-size: 1rem; font-weight: 600; color: #1a1a2e;">'
-                'Conversation Flow &mdash; How to Weave in Case Studies</p>'
-                '<ul style="margin: 0; padding-left: 1.25rem; font-size: 0.9rem; color: #444; line-height: 1.9;">'
-                + "".join(f"<li>{step}</li>" for step in flow_steps)
-                + '</ul></div>',
-                unsafe_allow_html=True,
-            )
-
 else:
     # Welcome state — stats cards
     st.markdown(f"""
@@ -795,6 +779,85 @@ else:
     """, unsafe_allow_html=True)
 
     st.info("Enter a query above to search across your case study library.")
+
+# --- Agenda-based Case Study Search ---
+st.markdown("---")
+st.markdown(
+    '<p style="font-size: 1.1rem; font-weight: 600; color: #1a1a2e; margin-bottom: 0.25rem;">'
+    'Meeting Agenda Search</p>'
+    '<p style="font-size: 0.85rem; color: #64748b; margin-bottom: 0.75rem;">'
+    'Paste a meeting agenda to find matching case studies and get a conversation flow for weaving them in.</p>',
+    unsafe_allow_html=True,
+)
+
+agenda_col1, agenda_col2 = st.columns([6, 1])
+with agenda_col1:
+    agenda_text = st.text_input(
+        "Meeting Agenda",
+        placeholder="e.g., Discuss inventory management software for retail chain with 200+ stores",
+        label_visibility="collapsed",
+        key="agenda_input",
+    )
+with agenda_col2:
+    agenda_search_clicked = st.button("Find & Flow", use_container_width=True, key="agenda_btn")
+
+if agenda_text:
+    with st.spinner("Finding relevant case studies..."):
+        agenda_results = search(agenda_text, top_k=5)
+
+    if not agenda_results:
+        st.warning("No matching case studies found for this agenda.")
+    else:
+        st.markdown(
+            f'<div class="results-count">{len(agenda_results)} case studies for this agenda</div>',
+            unsafe_allow_html=True,
+        )
+
+        for i, r in enumerate(agenda_results, 1):
+            title = r["company_name"]
+            if r["use_case"]:
+                title += f" — {r['use_case']}"
+
+            with st.container(border=True):
+                col_title, col_score = st.columns([5, 1])
+                with col_title:
+                    st.markdown(f"**{i}. {title}**")
+                with col_score:
+                    st.markdown(
+                        f'<span style="background:rgba(0,191,166,0.15); color:#009e8c; '
+                        f'font-weight:700; font-size:0.85rem; padding:0.3rem 0.75rem; '
+                        f'border-radius:20px; white-space:nowrap;">{r["relevance_score"]}%</span>',
+                        unsafe_allow_html=True,
+                    )
+
+                st.caption(r["filename"])
+                st.write(r["summary"])
+
+                try:
+                    supabase, _ = get_clients()
+                    signed = supabase.storage.from_(STORAGE_BUCKET).create_signed_url(
+                        r["filename"], 3600
+                    )
+                    if signed and signed.get("signedURL"):
+                        st.link_button("View Case Study", signed["signedURL"])
+                except Exception:
+                    pass
+
+        # Conversation Flow
+        with st.spinner("Generating conversation flow..."):
+            flow_steps = generate_conversation_flow(agenda_text, agenda_results)
+
+        if flow_steps:
+            st.markdown(
+                '<div style="margin-top: 1.5rem; background: linear-gradient(135deg, #f5f0ff 0%, #ede7f6 100%); '
+                'border-radius: 12px; border: 1px solid #d1c4e9; padding: 1.5rem 1.75rem;">'
+                '<p style="margin: 0 0 0.75rem; font-size: 1rem; font-weight: 600; color: #1a1a2e;">'
+                'Conversation Flow &mdash; How to Weave in Case Studies</p>'
+                '<ul style="margin: 0; padding-left: 1.25rem; font-size: 0.9rem; color: #444; line-height: 1.9;">'
+                + "".join(f"<li>{step}</li>" for step in flow_steps)
+                + '</ul></div>',
+                unsafe_allow_html=True,
+            )
 
 # Footer
 st.markdown("""
