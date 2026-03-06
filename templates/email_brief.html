@@ -147,23 +147,20 @@
 {% endif %}
 
 {% if insight.web_research_summary %}
-<!-- Web Research -->
+<!-- Research Summary -->
 <tr>
 <td style="padding:14px 20px;border-bottom:1px solid #e8e8ee;">
-  <p style="margin:0 0 6px;color:#1a1a2e;font-size:13px;font-weight:600;">Research Summary</p>
-  <p style="margin:0;font-size:12px;color:#444;line-height:1.6;">{{ insight.web_research_summary }}</p>
-</td>
-</tr>
-{% endif %}
-
-{% if insight.research_prompt %}
-<!-- AI Prompt Used -->
-<tr>
-<td style="padding:14px 20px;border-bottom:1px solid #e8e8ee;">
-  <details style="font-size:12px;">
-    <summary style="color:#1a1a2e;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:6px;">Prompt Sent to AI</summary>
-    <pre style="margin:6px 0 0;padding:10px;background-color:#f4f4f7;border-radius:4px;font-size:11px;color:#444;white-space:pre-wrap;word-wrap:break-word;font-family:Consolas,monospace;line-height:1.5;">{{ insight.research_prompt }}</pre>
-  </details>
+  <p style="margin:0 0 6px;color:#1a1a2e;font-size:13px;font-weight:600;">Research Summary — Background &amp; Latest News</p>
+  <ul style="margin:0;padding-left:18px;font-size:12px;color:#444;line-height:1.8;">
+    {% for item in insight.web_research_summary %}
+    <li>{{ item }}</li>
+    {% endfor %}
+  </ul>
+  {% if insight.source_urls %}
+  <p style="margin:8px 0 0;font-size:11px;color:#888;">
+    Sources: {% for url in insight.source_urls[:5] %}<a href="{{ url }}" style="color:#4361ee;text-decoration:none;">{{ loop.index }}</a>{% if not loop.last %}, {% endif %}{% endfor %}
+  </p>
+  {% endif %}
 </td>
 </tr>
 {% endif %}
@@ -171,13 +168,25 @@
 {% if insight.talking_points %}
 <!-- Talking Points -->
 <tr>
-<td style="padding:14px 20px;">
-  <p style="margin:0 0 6px;color:#1a1a2e;font-size:13px;font-weight:600;">Talking Points</p>
+<td style="padding:14px 20px;{% if insight.research_prompt %}border-bottom:1px solid #e8e8ee;{% endif %}">
+  <p style="margin:0 0 6px;color:#1a1a2e;font-size:13px;font-weight:600;">Individual Talking Points</p>
   <ul style="margin:0;padding-left:18px;font-size:12px;color:#333;line-height:1.8;">
     {% for point in insight.talking_points %}
     <li>{{ point }}</li>
     {% endfor %}
   </ul>
+</td>
+</tr>
+{% endif %}
+
+{% if insight.research_prompt %}
+<!-- AI Prompt Used (last in attendee card) -->
+<tr>
+<td style="padding:14px 20px;">
+  <details style="font-size:12px;">
+    <summary style="color:#1a1a2e;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:6px;">Prompt Sent to AI</summary>
+    <pre style="margin:6px 0 0;padding:10px;background-color:#f4f4f7;border-radius:4px;font-size:11px;color:#444;white-space:pre-wrap;word-wrap:break-word;font-family:Consolas,monospace;line-height:1.5;">{{ insight.research_prompt }}</pre>
+  </details>
 </td>
 </tr>
 {% endif %}
@@ -193,7 +202,7 @@
 <td style="padding:16px 32px;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0f3ff;border-radius:6px;">
     <tr><td style="padding:14px 20px;">
-      <p style="margin:0 0 8px;color:#1a1a2e;font-size:13px;font-weight:600;">Key Themes</p>
+      <p style="margin:0 0 8px;color:#1a1a2e;font-size:13px;font-weight:600;">Key Themes — Cross-cutting Patterns</p>
       <ul style="margin:0;padding-left:18px;font-size:12px;color:#333;line-height:1.8;">
         {% for theme in mb.key_themes %}
         <li>{{ theme }}</li>
@@ -211,12 +220,30 @@
 <td style="padding:0 32px 24px;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#fff8f0;border-radius:6px;">
     <tr><td style="padding:14px 20px;">
-      <p style="margin:0 0 8px;color:#1a1a2e;font-size:13px;font-weight:600;">Suggested Questions</p>
-      <ol style="margin:0;padding-left:18px;font-size:12px;color:#333;line-height:1.8;">
+      <p style="margin:0 0 8px;color:#1a1a2e;font-size:13px;font-weight:600;">Generic Suggested Questions</p>
+      <ul style="margin:0;padding-left:18px;font-size:12px;color:#333;line-height:1.8;">
         {% for q in mb.suggested_questions %}
         <li>{{ q }}</li>
         {% endfor %}
-      </ol>
+      </ul>
+    </td></tr>
+  </table>
+</td>
+</tr>
+{% endif %}
+
+{% if mb.conversation_flow %}
+<!-- Conversation Flow -->
+<tr>
+<td style="padding:0 32px 16px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f5f0ff;border-radius:6px;border:1px solid #d1c4e9;">
+    <tr><td style="padding:14px 20px;">
+      <p style="margin:0 0 8px;color:#1a1a2e;font-size:13px;font-weight:600;">Conversation Flow — How to Weave in Case Studies</p>
+      <ul style="margin:0;padding-left:18px;font-size:12px;color:#444;line-height:1.8;">
+        {% for step in mb.conversation_flow %}
+        <li>{{ step }}</li>
+        {% endfor %}
+      </ul>
     </td></tr>
   </table>
 </td>
@@ -224,25 +251,22 @@
 {% endif %}
 
 {% if mb.recommended_case_studies %}
-<!-- Recommended Case Studies -->
+<!-- Top Case Studies to Reference -->
 <tr>
 <td style="padding:0 32px 24px;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0faf0;border-radius:6px;border:1px solid #c8e6c9;">
     <tr><td style="padding:14px 20px;">
-      <p style="margin:0 0 10px;color:#1a1a2e;font-size:13px;font-weight:600;">Recommended Case Studies</p>
+      <p style="margin:0 0 10px;color:#1a1a2e;font-size:13px;font-weight:600;">Top Case Studies to Reference</p>
       {% for cs in mb.recommended_case_studies %}
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:10px;background-color:#ffffff;border-radius:4px;border:1px solid #e0e0e0;">
         <tr><td style="padding:10px 14px;">
           <p style="margin:0 0 4px;font-size:13px;font-weight:600;color:#2e7d32;">
-            {{ cs.company_name }}{% if cs.use_case %} &mdash; {{ cs.use_case }}{% endif %}
+            {{ loop.index }}. {{ cs.company_name }}{% if cs.use_case %} &mdash; {{ cs.use_case }}{% endif %}
+            <span style="font-weight:400;font-size:11px;color:#888;margin-left:6px;">{{ (cs.similarity_score * 100)|round(0)|int }}% match</span>
           </p>
-          <p style="margin:0 0 4px;font-size:11px;color:#888;">
-            {{ cs.filename }}
-            {% if cs.doc_type %}&bull; Type: {{ cs.doc_type }}{% endif %}
-            &bull; Match: {{ (cs.similarity_score * 100)|round(0)|int }}%
-          </p>
-          {% if cs.summary %}<p style="margin:0 0 4px;font-size:12px;color:#444;">{{ cs.summary }}</p>{% endif %}
-          {% if cs.relevance_note %}<p style="margin:0;font-size:12px;color:#2e7d32;font-style:italic;">{{ cs.relevance_note }}</p>{% endif %}
+          {% if cs.brief_description %}<p style="margin:0 0 4px;font-size:12px;color:#444;line-height:1.5;">{{ cs.brief_description }}</p>{% elif cs.summary %}<p style="margin:0 0 4px;font-size:12px;color:#444;line-height:1.5;">{{ cs.summary[:200] }}{% if cs.summary|length > 200 %}...{% endif %}</p>{% endif %}
+          {% if cs.relevance_note %}<p style="margin:4px 0 0;font-size:11px;color:#2e7d32;font-style:italic;">&#8594; {{ cs.relevance_note }}</p>{% endif %}
+          {% if cs.download_url %}<p style="margin:6px 0 0;"><a href="{{ cs.download_url }}" style="color:#4361ee;font-size:12px;text-decoration:none;font-weight:500;">View Case Study &rarr;</a></p>{% endif %}
         </td></tr>
       </table>
       {% endfor %}

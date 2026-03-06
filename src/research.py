@@ -132,10 +132,13 @@ def research_attendee(
         "4. Recent job postings that reveal strategic priorities\n\n"
         "Respond in this exact JSON format:\n"
         "{\n"
-        '    "web_research_summary": "A 2-3 paragraph summary of key findings",\n'
+        '    "web_research_summary": ["key finding 1", "key finding 2", "key finding 3", "..."],\n'
         '    "talking_points": ["point 1", "point 2", "point 3", "point 4", "point 5"]\n'
         "}\n\n"
-        "Talking points should be specific, actionable conversation starters. "
+        "web_research_summary: 4-6 bullet points covering the person's role, company news, "
+        "industry position, and strategic priorities. Each bullet should be 1-2 sentences.\n\n"
+        "talking_points: 3-5 personalised ice-breakers specific to THIS person — things you "
+        "can say to build rapport based on their background, recent activity, or company news. "
         "Keep each point to 1-2 sentences."
     )
 
@@ -154,16 +157,22 @@ def research_attendee(
         result_text, citations = _chat(system_prompt, user_message)
         parsed = _parse_json_response(result_text)
 
-        # Append citation URLs to the research summary
-        summary = parsed.get("web_research_summary", result_text)
-        if citations:
-            source_list = "\n".join(f"- {url}" for url in citations[:10])
-            summary += f"\n\nSources:\n{source_list}"
+        summary_raw = parsed.get("web_research_summary", [])
+        # Handle if model returns a string instead of list
+        if isinstance(summary_raw, str):
+            summary_raw = [s.strip() for s in summary_raw.split("\n") if s.strip()]
+        # Handle if model returns list of dicts like {"finding": "...", "citations": [...]}
+        summary_raw = [
+            item["finding"] if isinstance(item, dict) and "finding" in item
+            else str(item) if not isinstance(item, str) else item
+            for item in summary_raw
+        ]
 
         return AttendeeInsight(
             attendee=attendee,
             zoominfo=zoominfo,
-            web_research_summary=summary,
+            web_research_summary=summary_raw,
+            source_urls=citations[:10],
             talking_points=parsed.get("talking_points", []),
             research_prompt=full_prompt,
         )
@@ -175,7 +184,7 @@ def research_attendee(
         return AttendeeInsight(
             attendee=attendee,
             zoominfo=zoominfo,
-            web_research_summary=f"Research unavailable: {e}",
+            web_research_summary=[f"Research unavailable: {e}"],
             talking_points=[],
         )
 
@@ -197,7 +206,7 @@ def synthesize_meeting_brief(
             parts.append(f"ZoomInfo title: {insight.zoominfo.contact.title}")
         if insight.zoominfo and insight.zoominfo.company:
             parts.append(f"Company: {insight.zoominfo.company.name}")
-        parts.append(f"Research: {insight.web_research_summary}")
+        parts.append(f"Research: {'; '.join(insight.web_research_summary)}")
         if insight.talking_points:
             parts.append("Talking points: " + "; ".join(insight.talking_points))
         insights_text.append("\n".join(parts))
@@ -222,11 +231,21 @@ def synthesize_meeting_brief(
         case_study_json_schema = (
             ',\n'
             '    "case_study_relevance": {"filename1.pdf": "Why this case study is relevant", '
-            '"filename2.pdf": "Why this one is relevant"}'
+            '"filename2.pdf": "Why this one is relevant"},\n'
+            '    "case_study_briefs": {"filename1.pdf": "A concise 2-line description of the case study", '
+            '"filename2.pdf": "A concise 2-line description"},\n'
+            '    "conversation_flow": ["Step 1: how to introduce first case study", '
+            '"Step 2: transition to next case study", "Step 3: ..."]'
         )
         case_study_instruction = (
-            "\nFor each case study, explain in 1-2 sentences why it's relevant "
-            "to this specific meeting and how it could be used in conversation."
+            "\nFor each case study:\n"
+            "- In case_study_relevance: explain in 1-2 sentences why it's relevant to this meeting.\n"
+            "- In case_study_briefs: write a concise 2-line description of what the case study covers "
+            "(the client problem and the outcome achieved).\n\n"
+            "For conversation_flow: provide 3-5 bullet points as a list, each describing a step "
+            "in the conversation where you naturally bring up a case study. Include specific transition "
+            "phrases like 'We recently worked with...' or 'This reminds me of a similar challenge at...'. "
+            "Each bullet should name the case study and suggest when/how to introduce it."
         )
 
     system_prompt = (
@@ -238,8 +257,11 @@ def synthesize_meeting_brief(
         '    "suggested_questions": ["question 1", "question 2", "question 3", "question 4", "question 5"]'
         f"{case_study_json_schema}\n"
         "}\n\n"
-        "Key themes should capture cross-cutting patterns across attendees.\n"
-        "Questions should be strategic, open-ended, and designed to build rapport."
+        "key_themes: 3-5 cross-cutting patterns or insights that span across all attendees "
+        "and the meeting agenda — industry trends, shared challenges, or strategic opportunities.\n\n"
+        "suggested_questions: 4-6 strategic, open-ended questions to drive the meeting discussion. "
+        "These should be about the business problem, decision criteria, and next steps — NOT about "
+        "the person's background (those are covered separately as talking points)."
         f"{case_study_instruction}"
     )
 
@@ -261,11 +283,13 @@ def synthesize_meeting_brief(
         result_text, _ = _chat(system_prompt, user_message)
         parsed = _parse_json_response(result_text)
 
-        # Populate relevance notes on case studies
+        # Populate relevance notes and brief descriptions on case studies
         enriched_case_studies = list(case_studies) if case_studies else []
         relevance_map = parsed.get("case_study_relevance", {})
+        briefs_map = parsed.get("case_study_briefs", {})
         for cs in enriched_case_studies:
             cs.relevance_note = relevance_map.get(cs.filename, "")
+            cs.brief_description = briefs_map.get(cs.filename, "")
 
         return MeetingBrief(
             meeting=meeting,
@@ -273,6 +297,7 @@ def synthesize_meeting_brief(
             key_themes=parsed.get("key_themes", []),
             suggested_questions=parsed.get("suggested_questions", []),
             recommended_case_studies=enriched_case_studies,
+            conversation_flow=parsed.get("conversation_flow", []),
         )
 
     except Exception as e:

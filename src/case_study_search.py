@@ -127,6 +127,17 @@ def search_case_studies(
             candidate.similarity_score = round(item.relevance_score, 3)
             matches.append(candidate)
 
+        # Generate signed download URLs for each matched case study
+        for m in matches:
+            try:
+                signed = supabase.storage.from_("case-studies").create_signed_url(
+                    m.filename, 86400  # 24-hour link
+                )
+                if signed and signed.get("signedURL"):
+                    m.download_url = signed["signedURL"]
+            except Exception as e:
+                logger.warning("Could not generate signed URL for %s: %s", m.filename, e)
+
         logger.info("Reranked to %d case studies", len(matches))
         for m in matches:
             logger.info("  %.3f — %s (%s)", m.similarity_score, m.filename, m.company_name)

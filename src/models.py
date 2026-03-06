@@ -96,8 +96,10 @@ class CaseStudyMatch(BaseModel):
     use_case: str = ""
     doc_type: str = ""
     summary: str = ""
+    brief_description: str = ""  # 2-liner for the email
     similarity_score: float = 0.0
     relevance_note: str = ""
+    download_url: str = ""
 
 
 # --- Brief models ---
@@ -106,7 +108,8 @@ class CaseStudyMatch(BaseModel):
 class AttendeeInsight(BaseModel):
     attendee: Attendee
     zoominfo: Optional[ZoomInfoEnrichment] = None
-    web_research_summary: str = ""
+    web_research_summary: list[str] = Field(default_factory=list)  # bullet points
+    source_urls: list[str] = Field(default_factory=list)
     talking_points: list[str] = Field(default_factory=list)
     research_prompt: str = ""  # the exact prompt sent to the AI model
 
@@ -117,6 +120,7 @@ class MeetingBrief(BaseModel):
     key_themes: list[str] = Field(default_factory=list)
     suggested_questions: list[str] = Field(default_factory=list)
     recommended_case_studies: list[CaseStudyMatch] = Field(default_factory=list)
+    conversation_flow: list[str] = Field(default_factory=list)  # bullet points on how to weave case studies into conversation
 
 
 class DailyBrief(BaseModel):

@@ -247,8 +247,8 @@ section[data-testid="stSidebar"] .stButton > button:hover {
     border-radius: 16px;
     padding: 2.5rem 2rem;
     margin-bottom: 1.5rem;
-    margin-left: -4rem;
-    margin-right: -4rem;
+    margin-left: 0;
+    margin-right: 0;
     position: relative;
     overflow: hidden;
 }
