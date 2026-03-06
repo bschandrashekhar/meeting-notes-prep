@@ -684,8 +684,15 @@ with st.sidebar:
             del st.query_params["auth"]
         st.rerun()
 
-    st.markdown("<div style='margin-top: 1rem;'></div>", unsafe_allow_html=True)
-    with st.expander("Change Password"):
+    st.markdown("""
+    <div style="margin-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem;">
+    </div>
+    """, unsafe_allow_html=True)
+    if st.button("Change Password", use_container_width=True, key="toggle_cp"):
+        st.session_state["show_change_password"] = not st.session_state.get("show_change_password", False)
+        st.rerun()
+
+    if st.session_state.get("show_change_password"):
         with st.form("change_password_form"):
             current_pw = st.text_input("Current Password", type="password", key="cp_current")
             new_pw = st.text_input("New Password", type="password", key="cp_new")
@@ -702,8 +709,8 @@ with st.sidebar:
                 else:
                     try:
                         _set_stored_password(new_pw)
-                        # Refresh auth token
                         st.query_params["auth"] = _make_auth_token()
+                        st.session_state["show_change_password"] = False
                         st.success("Password updated.")
                     except Exception as e:
                         st.error(f"Failed to update: {e}")
