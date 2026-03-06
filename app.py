@@ -1,9 +1,11 @@
 """Streamlit app for searching case studies via Voyage AI + Supabase pgvector."""
 
+import json
 import os
 import smtplib
 from email.mime.text import MIMEText
 
+import anthropic
 import streamlit as st
 import voyageai
 from dotenv import load_dotenv
@@ -24,6 +26,7 @@ def _get_secret(key: str) -> str:
 SUPABASE_URL = _get_secret("SUPABASE_URL")
 SUPABASE_SERVICE_KEY = _get_secret("SUPABASE_SERVICE_KEY")
 VOYAGE_API_KEY = _get_secret("VOYAGE_API_KEY")
+ANTHROPIC_API_KEY = _get_secret("ANTHROPIC_API_KEY")
 ADMIN_USERNAME = _get_secret("ADMIN_USERNAME") or "admin"
 ADMIN_PASSWORD = _get_secret("ADMIN_PASSWORD")
 RECOVERY_EMAIL = _get_secret("RECOVERY_EMAIL")
@@ -558,6 +561,63 @@ def get_clients():
     return supabase, voyage
 
 
+def generate_conversation_flow(agenda: str, case_studies: list[dict]) -> list[str]:
+    """Generate conversation flow bullets using Claude, based on matched case studies."""
+    if not ANTHROPIC_API_KEY or not case_studies:
+        return []
+
+    cs_context = "\n".join(
+        f"{i}. {cs['company_name']} — {cs['use_case']}: {cs['summary']}"
+        for i, cs in enumerate(case_studies, 1)
+    )
+
+    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+    response = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=1024,
+        system=(
+            "You are a meeting preparation strategist. Given a meeting agenda and a set of "
+            "relevant case studies from our portfolio, create a natural conversation flow "
+            "showing how to weave these case studies into the meeting discussion.\n\n"
+            "Respond in this exact JSON format:\n"
+            '{"conversation_flow": ["Step 1: ...", "Step 2: ...", "Step 3: ..."]}\n\n'
+            "Provide 3-5 bullet points, each describing a step in the conversation where you "
+            "naturally bring up a case study. Include specific transition phrases like "
+            "'We recently worked with...' or 'This reminds me of a similar challenge at...'. "
+            "Each bullet should name the case study and suggest when/how to introduce it."
+        ),
+        messages=[{
+            "role": "user",
+            "content": (
+                f"Meeting agenda: {agenda}\n\n"
+                f"Matched case studies:\n{cs_context}\n\n"
+                f"Create a conversation flow to naturally weave these case studies into the discussion."
+            ),
+        }],
+    )
+
+    text = response.content[0].text.strip()
+    # Parse JSON
+    if "```json" in text:
+        text = text[text.index("```json") + 7:text.index("```", text.index("```json") + 7)].strip()
+    elif "```" in text:
+        text = text[text.index("```") + 3:text.index("```", text.index("```") + 3)].strip()
+    try:
+        parsed = json.loads(text)
+    except json.JSONDecodeError:
+        brace_start = text.find("{")
+        brace_end = text.rfind("}") + 1
+        if brace_start >= 0 and brace_end > brace_start:
+            try:
+                parsed = json.loads(text[brace_start:brace_end])
+            except json.JSONDecodeError:
+                return []
+        else:
+            return []
+
+    return parsed.get("conversation_flow", [])
+
+
 def search(query: str, top_k: int = 5) -> list[dict]:
     supabase, voyage = get_clients()
 
@@ -698,6 +758,22 @@ if query:
                         st.link_button("Download PDF", signed["signedURL"])
                 except Exception:
                     pass
+
+        # Conversation Flow section
+        with st.spinner("Generating conversation flow..."):
+            flow_steps = generate_conversation_flow(query, results)
+
+        if flow_steps:
+            st.markdown(
+                '<div style="margin-top: 1.5rem; background: linear-gradient(135deg, #f5f0ff 0%, #ede7f6 100%); '
+                'border-radius: 12px; border: 1px solid #d1c4e9; padding: 1.5rem 1.75rem;">'
+                '<p style="margin: 0 0 0.75rem; font-size: 1rem; font-weight: 600; color: #1a1a2e;">'
+                'Conversation Flow &mdash; How to Weave in Case Studies</p>'
+                '<ul style="margin: 0; padding-left: 1.25rem; font-size: 0.9rem; color: #444; line-height: 1.9;">'
+                + "".join(f"<li>{step}</li>" for step in flow_steps)
+                + '</ul></div>',
+                unsafe_allow_html=True,
+            )
 
 else:
     # Welcome state — stats cards
