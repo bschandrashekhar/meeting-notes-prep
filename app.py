@@ -116,8 +116,10 @@ html, body, [class*="css"] {
 }
 
 /* ---- Hide default Streamlit branding & remove top padding ---- */
-#MainMenu, footer, header {visibility: hidden; height: 0; margin: 0; padding: 0;}
-.stApp > header {display: none;}
+#MainMenu, footer {visibility: hidden; height: 0; margin: 0; padding: 0;}
+.stApp > header {background: transparent !important;}
+/* Keep sidebar toggle visible but hide the toolbar items */
+header [data-testid="stToolbar"] {display: none;}
 .stMainBlockContainer {padding-top: 1rem !important;}
 section[data-testid="stSidebar"] > div:first-child {padding-top: 1rem !important;}
 
