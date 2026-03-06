@@ -117,9 +117,10 @@ html, body, [class*="css"] {
 
 /* ---- Hide default Streamlit branding & remove top padding ---- */
 #MainMenu, footer {visibility: hidden; height: 0; margin: 0; padding: 0;}
-.stApp > header {background: transparent !important;}
-/* Keep sidebar toggle visible but hide the toolbar items */
+.stApp > header {background: transparent !important; height: 0 !important; min-height: 0 !important; padding: 0 !important;}
 header [data-testid="stToolbar"] {display: none;}
+/* Ensure sidebar toggle stays visible */
+[data-testid="collapsedControl"] {z-index: 999; top: 0.5rem !important;}
 .stMainBlockContainer {padding-top: 1rem !important;}
 section[data-testid="stSidebar"] > div:first-child {padding-top: 1rem !important;}
 
@@ -402,33 +403,6 @@ div[data-testid="stVerticalBlock"] > div[data-testid="stContainer"]:hover {
     border-top: 1px solid var(--border);
 }
 
-/* ---- Sidebar expander (Change Password) ---- */
-section[data-testid="stSidebar"] .stExpander {
-    background: rgba(255,255,255,0.06) !important;
-    border: 1px solid rgba(255,255,255,0.12) !important;
-    border-radius: 8px !important;
-}
-section[data-testid="stSidebar"] .stExpander summary,
-section[data-testid="stSidebar"] .stExpander summary span,
-section[data-testid="stSidebar"] .stExpander summary p,
-section[data-testid="stSidebar"] .stExpander [data-testid="stExpanderToggleIcon"] {
-    color: #e2e8f0 !important;
-    font-weight: 500 !important;
-}
-section[data-testid="stSidebar"] .stExpander details[open] {
-    background: rgba(255,255,255,0.04) !important;
-}
-/* Sidebar form inputs need dark text on light bg */
-section[data-testid="stSidebar"] .stExpander .stTextInput input {
-    background: rgba(255,255,255,0.9) !important;
-    color: #1a1a2e !important;
-    -webkit-text-fill-color: #1a1a2e !important;
-    border-color: rgba(255,255,255,0.25) !important;
-}
-section[data-testid="stSidebar"] .stExpander .stTextInput label {
-    color: #cbd5e1 !important;
-}
-
 /* ---- Tabs ---- */
 .stTabs [data-baseweb="tab-list"] {
     gap: 0 !important;
@@ -686,36 +660,6 @@ with st.sidebar:
             del st.query_params["auth"]
         st.rerun()
 
-    st.markdown("""
-    <div style="margin-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem;">
-    </div>
-    """, unsafe_allow_html=True)
-    if st.button("Change Password", use_container_width=True, key="toggle_cp"):
-        st.session_state["show_change_password"] = not st.session_state.get("show_change_password", False)
-        st.rerun()
-
-    if st.session_state.get("show_change_password"):
-        with st.form("change_password_form"):
-            current_pw = st.text_input("Current Password", type="password", key="cp_current")
-            new_pw = st.text_input("New Password", type="password", key="cp_new")
-            confirm_pw = st.text_input("Confirm New Password", type="password", key="cp_confirm")
-            change_submitted = st.form_submit_button("Update Password", use_container_width=True)
-
-            if change_submitted:
-                if not _verify_password(current_pw):
-                    st.error("Current password is incorrect.")
-                elif len(new_pw) < 4:
-                    st.error("New password must be at least 4 characters.")
-                elif new_pw != confirm_pw:
-                    st.error("New passwords do not match.")
-                else:
-                    try:
-                        _set_stored_password(new_pw)
-                        st.query_params["auth"] = _make_auth_token()
-                        st.session_state["show_change_password"] = False
-                        st.success("Password updated.")
-                    except Exception as e:
-                        st.error(f"Failed to update: {e}")
 
 
 def generate_conversation_flow(agenda: str, case_studies: list[dict]) -> list[str]:
@@ -854,7 +798,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-tab_keyword, tab_agenda = st.tabs(["Keyword Search", "Meeting Agenda Search"])
+tab_keyword, tab_agenda, tab_settings = st.tabs(["Keyword Search", "Meeting Agenda Search", "Settings"])
 
 # --- Tab 1: Keyword Search ---
 with tab_keyword:
@@ -1014,6 +958,30 @@ with tab_agenda:
                     + '</ul></div>',
                     unsafe_allow_html=True,
                 )
+
+# --- Tab 3: Settings ---
+with tab_settings:
+    st.markdown("#### Change Password")
+    with st.form("change_password_form"):
+        current_pw = st.text_input("Current Password", type="password", key="cp_current")
+        new_pw = st.text_input("New Password", type="password", key="cp_new")
+        confirm_pw = st.text_input("Confirm New Password", type="password", key="cp_confirm")
+        change_submitted = st.form_submit_button("Update Password", use_container_width=False)
+
+        if change_submitted:
+            if not _verify_password(current_pw):
+                st.error("Current password is incorrect.")
+            elif len(new_pw) < 4:
+                st.error("New password must be at least 4 characters.")
+            elif new_pw != confirm_pw:
+                st.error("New passwords do not match.")
+            else:
+                try:
+                    _set_stored_password(new_pw)
+                    st.query_params["auth"] = _make_auth_token()
+                    st.success("Password updated successfully.")
+                except Exception as e:
+                    st.error(f"Failed to update: {e}")
 
 # Footer
 st.markdown("""
