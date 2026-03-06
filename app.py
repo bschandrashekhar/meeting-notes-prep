@@ -398,6 +398,43 @@ div[data-testid="stVerticalBlock"] > div[data-testid="stContainer"]:hover {
     border-top: 1px solid var(--border);
 }
 
+/* ---- Tabs ---- */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 0 !important;
+    background: var(--card-bg) !important;
+    border-radius: 10px !important;
+    padding: 4px !important;
+    border: 1px solid var(--border) !important;
+    box-shadow: var(--shadow) !important;
+}
+.stTabs [data-baseweb="tab"] {
+    flex: 1 !important;
+    justify-content: center !important;
+    border-radius: 8px !important;
+    padding: 0.6rem 1.5rem !important;
+    font-weight: 600 !important;
+    font-size: 0.9rem !important;
+    color: var(--text-secondary) !important;
+    background: transparent !important;
+    border: none !important;
+    transition: all 0.2s ease !important;
+}
+.stTabs [data-baseweb="tab"]:hover {
+    color: var(--teal-dark) !important;
+    background: var(--teal-glow) !important;
+}
+.stTabs [aria-selected="true"] {
+    background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%) !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 8px rgba(15, 27, 45, 0.25) !important;
+}
+.stTabs [data-baseweb="tab-highlight"] {
+    display: none !important;
+}
+.stTabs [data-baseweb="tab-border"] {
+    display: none !important;
+}
+
 /* ---- Scrollbar styling ---- */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
