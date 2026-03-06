@@ -168,25 +168,13 @@
 {% if insight.talking_points %}
 <!-- Talking Points -->
 <tr>
-<td style="padding:14px 20px;{% if insight.research_prompt %}border-bottom:1px solid #e8e8ee;{% endif %}">
+<td style="padding:14px 20px;">
   <p style="margin:0 0 6px;color:#1a1a2e;font-size:13px;font-weight:600;">Individual Talking Points</p>
   <ul style="margin:0;padding-left:18px;font-size:12px;color:#333;line-height:1.8;">
     {% for point in insight.talking_points %}
     <li>{{ point }}</li>
     {% endfor %}
   </ul>
-</td>
-</tr>
-{% endif %}
-
-{% if insight.research_prompt %}
-<!-- AI Prompt Used (last in attendee card) -->
-<tr>
-<td style="padding:14px 20px;">
-  <details style="font-size:12px;">
-    <summary style="color:#1a1a2e;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:6px;">Prompt Sent to AI</summary>
-    <pre style="margin:6px 0 0;padding:10px;background-color:#f4f4f7;border-radius:4px;font-size:11px;color:#444;white-space:pre-wrap;word-wrap:break-word;font-family:Consolas,monospace;line-height:1.5;">{{ insight.research_prompt }}</pre>
-  </details>
 </td>
 </tr>
 {% endif %}

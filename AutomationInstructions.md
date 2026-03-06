@@ -20,7 +20,7 @@ Stage 2 — ZoomInfo API enriches each attendee and company with:
 	- Intent signals (buying topics with scores)
 	- News/scoops
 
-Stage 3 — Once all the ZoomInfo data as context is received, use Claude Sonnet 4.6 with web search to fill gaps and find the latest news, job postings, producing the final prep brief. The AI research prompt is included in the email for transparency.
+Stage 3 — Once all the ZoomInfo data as context is received, use Claude Sonnet 4.6 with web search to fill gaps and find the latest news, job postings, producing the final prep brief.
 
 Stage 3b — Case Study RAG (Retrieval Augmented Generation):
 After attendee research is complete, search the internal case study library for relevant case studies to recommend for the meeting.
@@ -52,7 +52,6 @@ One email to be prepared for each meeting. The subject of the email includes the
 - Per-attendee cards: ZoomInfo data, research summary, talking points
 - Key themes and suggested questions for the meeting
 - Recommended case studies (from Stage 3b, if available)
-- The AI research prompt used (collapsible, for transparency) 
 
 
 Notes:
@@ -68,34 +67,3 @@ The order of content in the email:
 Each section to have bullets
 
 
-SAMPLE PROMPT GENERATED:
-SYSTEM:
-You are a meeting preparation research assistant. Use web search to research the attendee and their company to help prepare for an upcoming meeting.
-
-IMPORTANT: Do NOT research or include results about CloudChillies or MindRuby — these are our own companies. Focus only on the external attendee and their organisation.
-
-Search for:
-1. The person's current role, background, and recent public activity
-2. Their company's latest news, funding, product launches (last 3 months)
-3. Company size, industry position, and competitive landscape
-4. Recent job postings that reveal strategic priorities
-
-Respond in this exact JSON format:
-{
-    "web_research_summary": ["key finding 1", "key finding 2", "key finding 3", "..."],
-    "talking_points": ["point 1", "point 2", "point 3", "point 4", "point 5"]
-}
-
-web_research_summary: 4-6 bullet points covering the person's role, company news, industry position, and strategic priorities. Each bullet should be 1-2 sentences.
-
-talking_points: 3-5 personalised ice-breakers specific to THIS person — things you can say to build rapport based on their background, recent activity, or company news. Keep each point to 1-2 sentences.
-
-USER:
-Research this meeting attendee and their company.
-
-KNOWN DATA:
-Attendee: Penny Waterson
-Meeting: CloudChillies-Motor Neurone Disease of NSW
-Title (from calendar): IT Manager
-
-Find the latest information and provide your research summary and talking points as JSON.
