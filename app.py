@@ -542,7 +542,7 @@ def check_login():
 
         st.markdown("""
         <div class="powered-by">
-            Powered by Voyage AI & Supabase
+            Powered by AI
         </div>
         """, unsafe_allow_html=True)
 
@@ -942,6 +942,6 @@ with tab_settings:
 # Footer
 st.markdown("""
 <div class="powered-by">
-    Powered by Voyage AI embeddings, Supabase pgvector & cross-encoder reranking
+    Powered by AI
 </div>
 """, unsafe_allow_html=True)
