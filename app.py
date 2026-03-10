@@ -487,9 +487,12 @@ def _get_stored_password_hash() -> str | None:
 def _set_stored_password(password: str):
     """Store hashed password in Supabase app_settings."""
     supabase, _ = get_clients()
-    supabase.table("app_settings").upsert({
+    new_hash = _hash_password(password)
+    # Delete any existing rows first, then insert fresh (avoids duplicate key issues)
+    supabase.table("app_settings").delete().eq("key", "admin_password_hash").execute()
+    supabase.table("app_settings").insert({
         "key": "admin_password_hash",
-        "value": _hash_password(password),
+        "value": new_hash,
     }).execute()
 
 
