@@ -321,7 +321,7 @@ def sync(dry_run: bool = False, single_file: str | None = None, force: bool = Fa
                 "filename": filename,
                 "company_name": meta["company_name"],
                 "use_case": meta["use_case"],
-                "doc_type": meta["doc_type"],
+                "doc_type": doc_type_xl or meta["doc_type"],
                 "tags": tags,
                 "industry": industry,
                 "content_text": text[:50000],  # cap at 50k chars

@@ -33,15 +33,17 @@ def search_case_studies(
     meeting: Meeting,
     attendee_insights: list[AttendeeInsight],
     match_count: int = 5,
-) -> list[CaseStudyMatch]:
+) -> tuple[list[CaseStudyMatch], list[CaseStudyMatch]]:
     """Search for relevant case studies based on meeting context.
 
     Uses the meeting agenda as the primary signal, supplemented by
     attendee company/industry information.
+
+    Returns (case_studies, capability_documents) — split by doc_type.
     """
     if not SUPABASE_URL or not SUPABASE_SERVICE_KEY or not VOYAGE_API_KEY:
         logger.info("Case study search skipped — missing SUPABASE_URL, SUPABASE_SERVICE_KEY, or VOYAGE_API_KEY")
-        return []
+        return [], []
 
     # Build search query from meeting context
     query_parts = []
@@ -106,7 +108,7 @@ def search_case_studies(
 
         if not response.data:
             logger.info("No case studies matched the similarity threshold")
-            return []
+            return [], []
 
         # Build candidate list from vector search results
         candidates = []
@@ -138,22 +140,33 @@ def search_case_studies(
                 parts.append(f"Tags: {m.tags}")
             parts.append(c["summary"])
             rerank_docs.append(". ".join(parts))
+        # Rerank more candidates to have enough for both categories
+        rerank_top_k = match_count * 2
         rerank_result = voyage.rerank(
             query=query_text[:8000],
             documents=rerank_docs,
             model="rerank-2",
-            top_k=match_count,
+            top_k=min(rerank_top_k, len(candidates)),
         )
 
-        # Build final results ordered by rerank score
-        matches = []
+        # Build reranked results and split by doc_type
+        case_studies = []
+        capability_docs = []
         for item in rerank_result.results:
             candidate = candidates[item.index]["match"]
             candidate.similarity_score = round(item.relevance_score, 3)
-            matches.append(candidate)
+            if candidate.doc_type == "Capability Document":
+                capability_docs.append(candidate)
+            else:
+                case_studies.append(candidate)
 
-        # Generate signed download URLs for each matched case study
-        for m in matches:
+        # Trim each list to match_count
+        case_studies = case_studies[:match_count]
+        capability_docs = capability_docs[:match_count]
+
+        # Generate signed download URLs for all matched documents
+        all_matches = case_studies + capability_docs
+        for m in all_matches:
             try:
                 signed = supabase.storage.from_("case-studies").create_signed_url(
                     m.filename, 86400  # 24-hour link
@@ -163,12 +176,14 @@ def search_case_studies(
             except Exception as e:
                 logger.warning("Could not generate signed URL for %s: %s", m.filename, e)
 
-        logger.info("Reranked to %d case studies", len(matches))
-        for m in matches:
-            logger.info("  %.3f — %s (%s)", m.similarity_score, m.filename, m.company_name)
+        logger.info("Reranked to %d case studies + %d capability docs", len(case_studies), len(capability_docs))
+        for m in case_studies:
+            logger.info("  [CS] %.3f — %s (%s)", m.similarity_score, m.filename, m.company_name)
+        for m in capability_docs:
+            logger.info("  [CD] %.3f — %s (%s)", m.similarity_score, m.filename, m.company_name)
 
-        return matches
+        return case_studies, capability_docs
 
     except Exception as e:
         logger.error("Case study search failed: %s", e)
-        return []
+        return [], []

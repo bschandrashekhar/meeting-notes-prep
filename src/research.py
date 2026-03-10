@@ -191,6 +191,7 @@ def synthesize_meeting_brief(
     meeting: Meeting,
     attendee_insights: list[AttendeeInsight],
     case_studies: list[CaseStudyMatch] | None = None,
+    capability_docs: list[CaseStudyMatch] | None = None,
 ) -> MeetingBrief:
     """Synthesize a meeting brief from all attendee insights and case studies."""
 
@@ -222,6 +223,16 @@ def synthesize_meeting_brief(
                 f"   Summary: {cs.summary}"
             )
         case_study_context = "\n".join(cs_parts)
+
+    if capability_docs:
+        cd_parts = ["\n\nIndustry Capability Documents (for reference):"]
+        for i, cd in enumerate(capability_docs, 1):
+            cd_parts.append(
+                f"\n{i}. {cd.filename} (Company: {cd.company_name}, "
+                f"Use Case: {cd.use_case}, Match: {cd.similarity_score:.0%})\n"
+                f"   Summary: {cd.summary}"
+            )
+        case_study_context += "\n".join(cd_parts)
 
     case_study_json_schema = ""
     case_study_instruction = ""
@@ -283,9 +294,10 @@ def synthesize_meeting_brief(
 
         # Populate relevance notes and brief descriptions on case studies
         enriched_case_studies = list(case_studies) if case_studies else []
+        enriched_capability_docs = list(capability_docs) if capability_docs else []
         relevance_map = parsed.get("case_study_relevance", {})
         briefs_map = parsed.get("case_study_briefs", {})
-        for cs in enriched_case_studies:
+        for cs in enriched_case_studies + enriched_capability_docs:
             cs.relevance_note = relevance_map.get(cs.filename, "")
             cs.brief_description = briefs_map.get(cs.filename, "")
 
@@ -295,6 +307,7 @@ def synthesize_meeting_brief(
             key_themes=parsed.get("key_themes", []),
             suggested_questions=parsed.get("suggested_questions", []),
             recommended_case_studies=enriched_case_studies,
+            reference_capabilities=enriched_capability_docs,
             conversation_flow=parsed.get("conversation_flow", []),
         )
 
@@ -304,6 +317,7 @@ def synthesize_meeting_brief(
             meeting=meeting,
             attendee_insights=attendee_insights,
             recommended_case_studies=list(case_studies) if case_studies else [],
+            reference_capabilities=list(capability_docs) if capability_docs else [],
         )
 
 

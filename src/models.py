@@ -122,6 +122,7 @@ class MeetingBrief(BaseModel):
     key_themes: list[str] = Field(default_factory=list)
     suggested_questions: list[str] = Field(default_factory=list)
     recommended_case_studies: list[CaseStudyMatch] = Field(default_factory=list)
+    reference_capabilities: list[CaseStudyMatch] = Field(default_factory=list)  # capability documents for industry reference
     conversation_flow: list[str] = Field(default_factory=list)  # bullet points on how to weave case studies into conversation
 
 

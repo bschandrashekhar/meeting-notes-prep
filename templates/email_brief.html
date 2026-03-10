@@ -264,6 +264,32 @@
 </tr>
 {% endif %}
 
+{% if mb.reference_capabilities %}
+<!-- Industry Capability Documents -->
+<tr>
+<td style="padding:0 32px 24px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0f4fa;border-radius:6px;border:1px solid #b0c4de;">
+    <tr><td style="padding:14px 20px;">
+      <p style="margin:0 0 10px;color:#1a1a2e;font-size:13px;font-weight:600;">Industry Capability Documents</p>
+      {% for cd in mb.reference_capabilities %}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:10px;background-color:#ffffff;border-radius:4px;border:1px solid #e0e0e0;">
+        <tr><td style="padding:10px 14px;">
+          <p style="margin:0 0 4px;font-size:13px;font-weight:600;color:#2c5282;">
+            {{ loop.index }}. {{ cd.company_name }}{% if cd.use_case %} &mdash; {{ cd.use_case }}{% endif %}
+            <span style="font-weight:400;font-size:11px;color:#888;margin-left:6px;">{{ (cd.similarity_score * 100)|round(0)|int }}% match</span>
+          </p>
+          {% if cd.brief_description %}<p style="margin:0 0 4px;font-size:12px;color:#444;line-height:1.5;">{{ cd.brief_description }}</p>{% elif cd.summary %}<p style="margin:0 0 4px;font-size:12px;color:#444;line-height:1.5;">{{ cd.summary[:200] }}{% if cd.summary|length > 200 %}...{% endif %}</p>{% endif %}
+          {% if cd.relevance_note %}<p style="margin:4px 0 0;font-size:11px;color:#2c5282;font-style:italic;">&#8594; {{ cd.relevance_note }}</p>{% endif %}
+          {% if cd.download_url %}<p style="margin:6px 0 0;"><a href="{{ cd.download_url }}" style="color:#4361ee;font-size:12px;text-decoration:none;font-weight:500;">View Document &rarr;</a></p>{% endif %}
+        </td></tr>
+      </table>
+      {% endfor %}
+    </td></tr>
+  </table>
+</td>
+</tr>
+{% endif %}
+
 {% if not loop.last %}
 <!-- Divider between meetings -->
 <tr><td style="padding:0 32px;"><hr style="border:none;border-top:2px solid #e8e8ee;margin:0;"></td></tr>
