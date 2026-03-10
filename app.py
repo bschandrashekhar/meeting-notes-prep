@@ -114,9 +114,9 @@ html, body, [class*="css"] {
 }
 
 /* ---- Hide default Streamlit branding & remove top padding ---- */
-#MainMenu, footer {visibility: hidden; height: 0; margin: 0; padding: 0;}
-.stApp > header {background: transparent !important; height: 0 !important; min-height: 0 !important; padding: 0 !important; display: none !important;}
-header [data-testid="stToolbar"] {display: none;}
+#MainMenu, footer, [data-testid="stDecoration"] {visibility: hidden; height: 0; margin: 0; padding: 0; display: none !important;}
+.stApp > header, header[data-testid="stHeader"] {background: transparent !important; height: 0 !important; min-height: 0 !important; max-height: 0 !important; padding: 0 !important; display: none !important; overflow: hidden !important;}
+header [data-testid="stToolbar"] {display: none !important;}
 /* Ensure sidebar toggle stays visible */
 [data-testid="collapsedControl"] {z-index: 999; top: 0.5rem !important;}
 .stMainBlockContainer {padding-top: 1rem !important;}
