@@ -115,7 +115,7 @@ html, body, [class*="css"] {
 
 /* ---- Hide default Streamlit branding & remove top padding ---- */
 #MainMenu, footer {visibility: hidden; height: 0; margin: 0; padding: 0;}
-.stApp > header {background: transparent !important; height: 0 !important; min-height: 0 !important; padding: 0 !important;}
+.stApp > header {background: transparent !important; height: 0 !important; min-height: 0 !important; padding: 0 !important; display: none !important;}
 header [data-testid="stToolbar"] {display: none;}
 /* Ensure sidebar toggle stays visible */
 [data-testid="collapsedControl"] {z-index: 999; top: 0.5rem !important;}
