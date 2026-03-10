@@ -95,6 +95,8 @@ class CaseStudyMatch(BaseModel):
     company_name: str = ""
     use_case: str = ""
     doc_type: str = ""
+    tags: str = ""
+    industry: str = ""
     summary: str = ""
     brief_description: str = ""  # 2-liner for the email
     similarity_score: float = 0.0

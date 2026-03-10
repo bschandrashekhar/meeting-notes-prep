@@ -4,6 +4,7 @@ import hashlib
 import hmac
 import json
 import os
+import secrets
 import smtplib
 from email.mime.text import MIMEText
 
@@ -612,14 +613,21 @@ def _mask_email(email: str) -> str:
 
 
 def _send_recovery_email() -> bool:
-    """Send the admin password to the recovery email via SMTP."""
+    """Generate a new random password, store it, and email it."""
     if not SMTP_USERNAME or not SMTP_PASSWORD:
         return False
 
+    new_password = secrets.token_urlsafe(8)
+    try:
+        _set_stored_password(new_password)
+    except Exception:
+        return False
+
     msg = MIMEText(
-        f"Your Case Study Search login credentials:\n\n"
+        f"Your Case Study Search password has been reset.\n\n"
         f"Username: {ADMIN_USERNAME}\n"
-        f"Password: {ADMIN_PASSWORD}\n\n"
+        f"New Password: {new_password}\n\n"
+        f"You can change this after logging in via Settings > Change Password.\n\n"
         f"— Case Study Search App",
         "plain",
     )
@@ -730,24 +738,30 @@ def search(query: str, top_k: int = 5) -> list[dict]:
     )
     query_embedding = embed_result.embeddings[0]
 
-    # Vector search — fetch 2x for reranking
+    # Hybrid search: vector similarity + full-text keyword matching (RRF)
     response = supabase.rpc(
         "match_case_studies",
         {
             "query_embedding": query_embedding,
-            "match_count": top_k * 2,
-            "match_threshold": 0.3,
+            "match_count": top_k * 4,
+            "match_threshold": 0.15,
+            "search_query": query,
         },
     ).execute()
 
     if not response.data:
         return []
 
-    # Rerank with cross-encoder
-    rerank_docs = [
-        f"{row.get('company_name', '')} — {row.get('use_case', '')}: {row.get('summary', '')}"
-        for row in response.data
-    ]
+    # Rerank with cross-encoder (include tags/industry for better scoring)
+    rerank_docs = []
+    for row in response.data:
+        parts = [f"{row.get('company_name', '')} — {row.get('use_case', '')}"]
+        if row.get("industry"):
+            parts.append(f"Industry: {row['industry']}")
+        if row.get("tags"):
+            parts.append(f"Tags: {row['tags']}")
+        parts.append(row.get("summary", ""))
+        rerank_docs.append(". ".join(parts))
     rerank_result = voyage.rerank(
         query=query[:8000],
         documents=rerank_docs,
@@ -763,6 +777,8 @@ def search(query: str, top_k: int = 5) -> list[dict]:
             "company_name": row.get("company_name", ""),
             "use_case": row.get("use_case", ""),
             "doc_type": row.get("doc_type", ""),
+            "tags": row.get("tags", ""),
+            "industry": row.get("industry", ""),
             "summary": row.get("summary", ""),
             "filename": row.get("filename", ""),
             "relevance_score": round(item.relevance_score * 100, 1),
@@ -834,6 +850,8 @@ with tab_keyword:
                 meta_parts = []
                 if r["doc_type"]:
                     meta_parts.append(r["doc_type"])
+                if r.get("industry"):
+                    meta_parts.append(r["industry"])
                 meta_parts.append(r["filename"])
                 meta_text = " · ".join(meta_parts)
 
@@ -966,7 +984,17 @@ with tab_settings:
         current_pw = st.text_input("Current Password", type="password", key="cp_current")
         new_pw = st.text_input("New Password", type="password", key="cp_new")
         confirm_pw = st.text_input("Confirm New Password", type="password", key="cp_confirm")
-        change_submitted = st.form_submit_button("Update Password", use_container_width=False)
+        btn_col1, btn_col2, _ = st.columns([1, 1, 3])
+        with btn_col1:
+            change_submitted = st.form_submit_button("Update Password", use_container_width=True)
+        with btn_col2:
+            logout_submitted = st.form_submit_button("Logout", use_container_width=True)
+
+        if logout_submitted:
+            st.session_state["authenticated"] = False
+            if "auth" in st.query_params:
+                del st.query_params["auth"]
+            st.rerun()
 
         if change_submitted:
             if not _verify_password(current_pw):

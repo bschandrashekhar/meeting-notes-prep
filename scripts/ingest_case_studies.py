@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import anthropic
+import openpyxl
 import pdfplumber
 import voyageai
 from supabase import create_client
@@ -39,7 +40,50 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 CASE_STUDIES_DIR = PROJECT_ROOT / "all_casestudies_for_rag"
+MASTERLIST_PATH = CASE_STUDIES_DIR / "Case_studies_masterlist.xlsx"
 TABLE_NAME = "case_studies"
+
+
+def load_masterlist() -> dict[str, dict]:
+    """Load tags and industry from the Excel masterlist.
+
+    Returns a dict keyed by File_Name (stem without doc type suffix) with
+    keys: tags, industry, doc_type_xl.
+    """
+    if not MASTERLIST_PATH.exists():
+        logger.warning("Masterlist not found at %s — tags/industry will be empty", MASTERLIST_PATH)
+        return {}
+
+    wb = openpyxl.load_workbook(MASTERLIST_PATH, read_only=True)
+    ws = wb.active
+    masterlist = {}
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        file_name = (row[0] or "").strip()
+        if not file_name:
+            continue
+        doc_type_xl = (row[1] or "").strip()
+        tags = (row[2] or "").strip().replace("\n", ", ")
+        industry = (row[3] or "").strip().replace("\n", ", ")
+        masterlist[file_name] = {
+            "tags": tags,
+            "industry": industry,
+            "doc_type_xl": doc_type_xl,
+        }
+    wb.close()
+    logger.info("Loaded masterlist with %d entries", len(masterlist))
+    return masterlist
+
+
+def lookup_masterlist(filename: str, masterlist: dict[str, dict]) -> dict:
+    """Look up a PDF filename in the masterlist. Tries stem, then stem without doc type suffix."""
+    stem = Path(filename).stem
+    if stem in masterlist:
+        return masterlist[stem]
+    # Try without doc type suffix (e.g. Actaris_SmartMeteringSolution_MR -> Actaris_SmartMeteringSolution)
+    parts = stem.rsplit("_", 1)
+    if len(parts) == 2 and len(parts[1]) <= 4 and parts[0] in masterlist:
+        return masterlist[parts[0]]
+    return {"tags": "", "industry": "", "doc_type_xl": ""}
 
 
 def extract_text_from_pdf(pdf_path: Path) -> str:
@@ -99,11 +143,26 @@ def generate_summary(text: str, filename: str) -> str:
     return response.content[0].text.strip()
 
 
-def generate_embedding(text: str) -> list[float]:
-    """Generate a 1024-dim embedding using Voyage AI."""
+def generate_embedding(text: str, tags: str = "", industry: str = "", doc_type: str = "") -> list[float]:
+    """Generate a 1024-dim embedding using Voyage AI.
+
+    Prepends tags, industry, and document type to the text so the embedding
+    captures these signals for better matching.
+    """
     client = voyageai.Client(api_key=VOYAGE_API_KEY)
-    # Truncate to stay within model limits
-    truncated = text[:16000] if len(text) > 16000 else text
+    # Build a focused representation from summary + metadata (not full text)
+    # This produces a much stronger signal than diluting with full PDF content
+    enriched_parts = []
+    if doc_type:
+        enriched_parts.append(f"Document Type: {doc_type}")
+    if industry:
+        enriched_parts.append(f"Industry: {industry}")
+    if tags:
+        enriched_parts.append(f"Tags: {tags}")
+    enriched_parts.append(text)
+    enriched_text = "\n\n".join(enriched_parts)
+
+    truncated = enriched_text[:16000] if len(enriched_text) > 16000 else enriched_text
     result = client.embed([truncated], model="voyage-3-large", input_type="document")
     return result.embeddings[0]
 
@@ -120,14 +179,20 @@ def get_local_files() -> dict[str, Path]:
     return files
 
 
-def get_existing_records(supabase) -> dict[str, dict]:
+def get_existing_records(supabase, include_summary: bool = False) -> dict[str, dict]:
     """Fetch all existing records from Supabase. Returns filename -> record dict."""
-    result = supabase.table(TABLE_NAME).select("id, filename, updated_at").execute()
+    fields = "id, filename, updated_at"
+    if include_summary:
+        fields += ", summary"
+    result = supabase.table(TABLE_NAME).select(fields).execute()
     return {row["filename"]: row for row in result.data}
 
 
-def sync(dry_run: bool = False, single_file: str | None = None):
-    """Synchronize local PDFs with Supabase vector store."""
+def sync(dry_run: bool = False, single_file: str | None = None, force: bool = False, reembed_only: bool = False):
+    """Synchronize local PDFs with Supabase vector store.
+
+    If reembed_only=True, reuses existing summaries and only regenerates embeddings.
+    """
 
     if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
         logger.error("SUPABASE_URL and SUPABASE_SERVICE_KEY must be set")
@@ -135,11 +200,13 @@ def sync(dry_run: bool = False, single_file: str | None = None):
     if not VOYAGE_API_KEY:
         logger.error("VOYAGE_API_KEY must be set")
         sys.exit(1)
-    if not ANTHROPIC_API_KEY:
+    if not reembed_only and not ANTHROPIC_API_KEY:
         logger.error("ANTHROPIC_API_KEY must be set for summary generation")
         sys.exit(1)
 
     supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+
+    masterlist = load_masterlist()
 
     local_files = get_local_files()
     logger.info("Found %d local PDF files", len(local_files))
@@ -150,7 +217,7 @@ def sync(dry_run: bool = False, single_file: str | None = None):
             sys.exit(1)
         local_files = {single_file: local_files[single_file]}
 
-    existing = get_existing_records(supabase)
+    existing = get_existing_records(supabase, include_summary=reembed_only)
     logger.info("Found %d existing records in Supabase", len(existing))
 
     # Determine actions
@@ -161,19 +228,22 @@ def sync(dry_run: bool = False, single_file: str | None = None):
 
     for filename, path in local_files.items():
         if filename in existing:
-            # Check if file was modified after the Supabase record
-            file_mtime = datetime.fromtimestamp(
-                path.stat().st_mtime, tz=timezone.utc
-            )
-            db_updated = existing[filename].get("updated_at", "")
-            if db_updated:
-                db_time = datetime.fromisoformat(db_updated.replace("Z", "+00:00"))
-                if file_mtime > db_time:
-                    to_update.append(filename)
-                else:
-                    to_skip.append(filename)
-            else:
+            if force:
                 to_update.append(filename)
+            else:
+                # Check if file was modified after the Supabase record
+                file_mtime = datetime.fromtimestamp(
+                    path.stat().st_mtime, tz=timezone.utc
+                )
+                db_updated = existing[filename].get("updated_at", "")
+                if db_updated:
+                    db_time = datetime.fromisoformat(db_updated.replace("Z", "+00:00"))
+                    if file_mtime > db_time:
+                        to_update.append(filename)
+                    else:
+                        to_skip.append(filename)
+                else:
+                    to_update.append(filename)
         else:
             to_add.append(filename)
 
@@ -220,15 +290,30 @@ def sync(dry_run: bool = False, single_file: str | None = None):
                 logger.warning("  Skipping %s — no text extracted", filename)
                 continue
 
-            # Parse metadata from filename
+            # Parse metadata from filename and masterlist
             meta = parse_filename_metadata(filename)
+            xl = lookup_masterlist(filename, masterlist)
+            tags = xl["tags"]
+            industry = xl["industry"]
+            doc_type_xl = xl["doc_type_xl"]
+            if doc_type_xl:
+                logger.info("    Type: %s", doc_type_xl)
+            if tags:
+                logger.info("    Tags: %s", tags[:100])
+            if industry:
+                logger.info("    Industry: %s", industry)
 
-            # Generate summary
-            summary = generate_summary(text, filename)
-            logger.info("    Summary: %s", summary[:100] + "..." if len(summary) > 100 else summary)
+            # Generate or reuse summary
+            if reembed_only and filename in existing and existing[filename].get("summary"):
+                summary = existing[filename]["summary"]
+                logger.info("    Summary (reused): %s", summary[:100] + "..." if len(summary) > 100 else summary)
+            else:
+                summary = generate_summary(text, filename)
+                logger.info("    Summary: %s", summary[:100] + "..." if len(summary) > 100 else summary)
 
-            # Generate embedding
-            embedding = generate_embedding(text)
+            # Generate embedding from summary + metadata (not full text)
+            # Summary is a focused representation that produces stronger matching signals
+            embedding = generate_embedding(summary, tags=tags, industry=industry, doc_type=doc_type_xl)
             logger.info("    Embedding generated (dim=%d)", len(embedding))
 
             # Upsert to Supabase
@@ -237,6 +322,8 @@ def sync(dry_run: bool = False, single_file: str | None = None):
                 "company_name": meta["company_name"],
                 "use_case": meta["use_case"],
                 "doc_type": meta["doc_type"],
+                "tags": tags,
+                "industry": industry,
                 "content_text": text[:50000],  # cap at 50k chars
                 "summary": summary,
                 "embedding": embedding,
@@ -273,9 +360,11 @@ def main():
     parser = argparse.ArgumentParser(description="Sync case study PDFs to Supabase vector store")
     parser.add_argument("--dry-run", action="store_true", help="Preview changes without applying")
     parser.add_argument("--file", type=str, default=None, help="Process a single file by name")
+    parser.add_argument("--force", action="store_true", help="Re-process all files regardless of timestamps")
+    parser.add_argument("--reembed-only", action="store_true", help="Reuse existing summaries, only regenerate embeddings")
     args = parser.parse_args()
 
-    sync(dry_run=args.dry_run, single_file=args.file)
+    sync(dry_run=args.dry_run, single_file=args.file, force=args.force, reembed_only=args.reembed_only)
 
 
 if __name__ == "__main__":
