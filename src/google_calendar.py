@@ -8,15 +8,12 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 
-from src.config import GOOGLE_CREDENTIALS_FILE, GOOGLE_TOKEN_FILE, GOOGLE_SCOPES
+from src.config import CALENDAR_NAME, GOOGLE_CREDENTIALS_FILE, GOOGLE_TOKEN_FILE, GOOGLE_SCOPES
 from src.models import Attendee, Meeting
 
 logger = logging.getLogger(__name__)
 
 IST = ZoneInfo("Asia/Kolkata")
-
-# The Google Calendar to read meetings from
-CALENDAR_NAME = "mindruby-cloudchillies-meetings"
 
 # Domains to exclude from the invite-list fallback (internal teams)
 SKIP_DOMAINS = {"mindruby.com", "cloudchillies.com"}

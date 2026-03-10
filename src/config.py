@@ -18,6 +18,9 @@ ZOOMINFO_PASSWORD = os.getenv("ZOOMINFO_PASSWORD", "")
 # --- Email ---
 TARGET_EMAIL = os.getenv("TARGET_EMAIL", "sateesh@mindruby.com")
 
+# --- Google Calendar ---
+CALENDAR_NAME = os.getenv("CALENDAR_NAME", "MyClientMeetings")
+
 # --- Google OAuth ---
 GOOGLE_CREDENTIALS_FILE = PROJECT_ROOT / "credentials.json"
 GOOGLE_TOKEN_FILE = PROJECT_ROOT / "token.json"
