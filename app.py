@@ -757,7 +757,9 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-tab_keyword, tab_agenda, tab_settings = st.tabs(["Keyword Search", "Meeting Agenda Search", "Settings"])
+tab_keyword, tab_agenda, tab_clients, tab_capdocs, tab_settings = st.tabs([
+    "Keyword Search", "Meeting Agenda Search", "Client References", "Capability Documents", "Settings",
+])
 
 # --- Tab 1: Keyword Search ---
 with tab_keyword:
@@ -905,7 +907,170 @@ with tab_agenda:
                         pass
 
 
-# --- Tab 3: Settings ---
+# --- Tab 3: Client References ---
+with tab_clients:
+    st.markdown(
+        '<p style="font-size: 0.85rem; color: #64748b; margin-bottom: 0.75rem;">'
+        'Search for clients by industry keyword or meeting agenda to find references in similar verticals.</p>',
+        unsafe_allow_html=True,
+    )
+
+    client_query = st.text_input(
+        "Industry / Keyword",
+        placeholder="e.g., healthcare, financial services, retail, manufacturing",
+        label_visibility="collapsed",
+        key="client_ref_input",
+    )
+
+    if client_query:
+        _INDUSTRY_KEYWORDS = {
+            "salesforce", "healthcare", "non profit", "npo", "manufacturing",
+            "financial services", "financial service", "loan", "lending", "banking",
+            "education", "government", "retail", "logistics", "field services",
+            "facility services", "mining", "telecom", "media & entertainment",
+            "hitech", "iot", "security", "consulting", "insurance", "real estate",
+            "staffing services", "recruitment", "human resource", "law & legal",
+        }
+
+        # Extract industry signals from query
+        query_lower = client_query.lower()
+        query_tags = set()
+        for kw in _INDUSTRY_KEYWORDS:
+            if kw in query_lower:
+                query_tags.add(kw)
+        # Also treat each word as a potential tag
+        for word in query_lower.split():
+            if len(word) > 2:
+                query_tags.add(word.strip())
+
+        if not query_tags:
+            query_tags = {query_lower.strip()}
+
+        with st.spinner("Finding matching clients..."):
+            try:
+                supabase, _ = get_clients()
+                response = (
+                    supabase.table("client_references")
+                    .select("client_name, industry, geography, website_url, logo_url")
+                    .execute()
+                )
+
+                matched = []
+                for row in response.data or []:
+                    row_tags = {t.strip().lower() for t in row.get("industry", "").split(",") if t.strip()}
+                    overlap = len(query_tags & row_tags)
+                    # Also check partial matches
+                    if overlap == 0:
+                        for qt in query_tags:
+                            for rt in row_tags:
+                                if qt in rt or rt in qt:
+                                    overlap += 1
+                    if overlap > 0:
+                        matched.append((overlap, row))
+
+                matched.sort(key=lambda x: x[0], reverse=True)
+                clients_found = [m[1] for m in matched]
+
+            except Exception as e:
+                st.error(f"Failed to query client references: {e}")
+                clients_found = []
+
+        if not clients_found:
+            st.warning("No matching clients found for this query. Try a broader industry keyword.")
+        else:
+            st.markdown(
+                f'<div class="results-count">{len(clients_found)} clients in matching industries</div>',
+                unsafe_allow_html=True,
+            )
+
+            # Display in a grid of 5 per row
+            cols_per_row = 5
+            for row_start in range(0, len(clients_found), cols_per_row):
+                row_clients = clients_found[row_start:row_start + cols_per_row]
+                cols = st.columns(cols_per_row)
+                for j, client in enumerate(row_clients):
+                    with cols[j]:
+                        logo_html = ""
+                        if client.get("logo_url"):
+                            logo_html = (
+                                f'<img src="{client["logo_url"]}" width="48" height="48" '
+                                f'style="border-radius:8px;margin-bottom:6px;display:block;'
+                                f'margin-left:auto;margin-right:auto;" />'
+                            )
+                        link = client.get("website_url", "#")
+                        if link and not link.startswith("http"):
+                            link = f"https://{link}"
+                        st.markdown(
+                            f'<a href="{link}" target="_blank" style="text-decoration:none;display:block;text-align:center;padding:12px 4px;">'
+                            f'{logo_html}'
+                            f'<p style="margin:2px 0 0;font-size:0.8rem;color:#4a148c;font-weight:600;">{client["client_name"]}</p>'
+                            f'<p style="margin:1px 0 0;font-size:0.7rem;color:#999;">{client.get("industry", "")}</p>'
+                            f'<p style="margin:1px 0 0;font-size:0.65rem;color:#bbb;">{client.get("geography", "")}</p>'
+                            f'</a>',
+                            unsafe_allow_html=True,
+                        )
+    else:
+        st.info("Enter an industry keyword or paste a meeting agenda to find clients in similar verticals.")
+
+# --- Tab 4: Capability Documents ---
+with tab_capdocs:
+    st.markdown(
+        '<p style="font-size: 0.85rem; color: #64748b; margin-bottom: 0.75rem;">'
+        'All capability documents from our portfolio.</p>',
+        unsafe_allow_html=True,
+    )
+
+    with st.spinner("Loading capability documents..."):
+        try:
+            supabase, _ = get_clients()
+            cap_response = (
+                supabase.table("case_studies")
+                .select("filename, company_name, use_case, doc_type, tags, industry, summary")
+                .eq("doc_type", "Capability Document")
+                .order("company_name")
+                .execute()
+            )
+            cap_docs = cap_response.data or []
+        except Exception as e:
+            st.error(f"Failed to load capability documents: {e}")
+            cap_docs = []
+
+    if not cap_docs:
+        st.info("No capability documents found.")
+    else:
+        st.markdown(
+            f'<div class="results-count">{len(cap_docs)} capability documents</div>',
+            unsafe_allow_html=True,
+        )
+
+        for i, doc in enumerate(cap_docs, 1):
+            title = doc.get("company_name", "")
+            if doc.get("use_case"):
+                title += f" — {doc['use_case']}"
+
+            meta_parts = []
+            if doc.get("industry"):
+                meta_parts.append(doc["industry"])
+            if doc.get("tags"):
+                meta_parts.append(doc["tags"])
+            meta_parts.append(doc.get("filename", ""))
+            meta_text = " · ".join(meta_parts)
+
+            with st.container(border=True):
+                st.markdown(f"**{i}. {title}**")
+                st.caption(meta_text)
+                st.write(doc.get("summary", ""))
+
+                try:
+                    signed = supabase.storage.from_(STORAGE_BUCKET).create_signed_url(
+                        doc["filename"], 3600
+                    )
+                    if signed and signed.get("signedURL"):
+                        st.link_button("Download PDF", signed["signedURL"])
+                except Exception:
+                    pass
+
+# --- Tab 5: Settings ---
 with tab_settings:
     st.markdown("#### Change Password")
     with st.form("change_password_form"):

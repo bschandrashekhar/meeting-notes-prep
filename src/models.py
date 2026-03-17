@@ -104,6 +104,17 @@ class CaseStudyMatch(BaseModel):
     download_url: str = ""
 
 
+# --- Client reference models ---
+
+
+class ClientReference(BaseModel):
+    client_name: str
+    industry: str = ""
+    geography: str = ""
+    website_url: str = ""
+    logo_url: str = ""
+
+
 # --- Brief models ---
 
 
@@ -122,8 +133,10 @@ class MeetingBrief(BaseModel):
     key_themes: list[str] = Field(default_factory=list)
     suggested_questions: list[str] = Field(default_factory=list)
     recommended_case_studies: list[CaseStudyMatch] = Field(default_factory=list)
-    reference_capabilities: list[CaseStudyMatch] = Field(default_factory=list)  # capability documents for industry reference
+    industry_showcase: list[CaseStudyMatch] = Field(default_factory=list)  # same-industry case studies
+    reference_capabilities: list[CaseStudyMatch] = Field(default_factory=list)  # all capability documents (no matching)
     conversation_flow: list[str] = Field(default_factory=list)  # bullet points on how to weave case studies into conversation
+    client_references: list[ClientReference] = Field(default_factory=list)  # clients in same industry
 
 
 class DailyBrief(BaseModel):

@@ -9,6 +9,7 @@ from src.config import ANTHROPIC_API_KEY, ANTHROPIC_MODEL
 from src.models import (
     AttendeeInsight,
     CaseStudyMatch,
+    ClientReference,
     Meeting,
     MeetingBrief,
     ZoomInfoEnrichment,
@@ -191,7 +192,9 @@ def synthesize_meeting_brief(
     meeting: Meeting,
     attendee_insights: list[AttendeeInsight],
     case_studies: list[CaseStudyMatch] | None = None,
+    industry_showcase: list[CaseStudyMatch] | None = None,
     capability_docs: list[CaseStudyMatch] | None = None,
+    client_references: list[ClientReference] | None = None,
 ) -> MeetingBrief:
     """Synthesize a meeting brief from all attendee insights and case studies."""
 
@@ -212,10 +215,11 @@ def synthesize_meeting_brief(
 
     all_insights = "\n".join(insights_text)
 
-    # Build case study context
+    # Build case study context (only top matches + industry showcase for Claude synthesis)
     case_study_context = ""
+    all_cs_for_synthesis = []
     if case_studies:
-        cs_parts = ["\n\nRelevant Case Studies (from our portfolio):"]
+        cs_parts = ["\n\nTop Case Study Matches (from our portfolio):"]
         for i, cs in enumerate(case_studies, 1):
             cs_parts.append(
                 f"\n{i}. {cs.filename} (Company: {cs.company_name}, "
@@ -223,20 +227,22 @@ def synthesize_meeting_brief(
                 f"   Summary: {cs.summary}"
             )
         case_study_context = "\n".join(cs_parts)
+        all_cs_for_synthesis.extend(case_studies)
 
-    if capability_docs:
-        cd_parts = ["\n\nIndustry Capability Documents (for reference):"]
-        for i, cd in enumerate(capability_docs, 1):
-            cd_parts.append(
-                f"\n{i}. {cd.filename} (Company: {cd.company_name}, "
-                f"Use Case: {cd.use_case}, Match: {cd.similarity_score:.0%})\n"
-                f"   Summary: {cd.summary}"
+    if industry_showcase:
+        is_parts = ["\n\nIndustry Showcase Case Studies (same vertical):"]
+        for i, cs in enumerate(industry_showcase, 1):
+            is_parts.append(
+                f"\n{i}. {cs.filename} (Company: {cs.company_name}, "
+                f"Use Case: {cs.use_case}, Industry: {cs.industry})\n"
+                f"   Summary: {cs.summary}"
             )
-        case_study_context += "\n".join(cd_parts)
+        case_study_context += "\n".join(is_parts)
+        all_cs_for_synthesis.extend(industry_showcase)
 
     case_study_json_schema = ""
     case_study_instruction = ""
-    if case_studies:
+    if all_cs_for_synthesis:
         case_study_json_schema = (
             ',\n'
             '    "case_study_relevance": {"filename1.pdf": "Why this case study is relevant", '
@@ -247,7 +253,7 @@ def synthesize_meeting_brief(
             '"Step 2: transition to next case study", "Step 3: ..."]'
         )
         case_study_instruction = (
-            "\nFor each case study:\n"
+            "\nFor each case study (both top matches and industry showcase):\n"
             "- In case_study_relevance: explain in 1-2 sentences why it's relevant to this meeting.\n"
             "- In case_study_briefs: write a concise 2-line description of what the case study covers "
             "(the client problem and the outcome achieved).\n\n"
@@ -292,12 +298,12 @@ def synthesize_meeting_brief(
         result_text, _ = _chat(system_prompt, user_message)
         parsed = _parse_json_response(result_text)
 
-        # Populate relevance notes and brief descriptions on case studies
+        # Populate relevance notes and brief descriptions on case studies + industry showcase
         enriched_case_studies = list(case_studies) if case_studies else []
-        enriched_capability_docs = list(capability_docs) if capability_docs else []
+        enriched_industry_showcase = list(industry_showcase) if industry_showcase else []
         relevance_map = parsed.get("case_study_relevance", {})
         briefs_map = parsed.get("case_study_briefs", {})
-        for cs in enriched_case_studies + enriched_capability_docs:
+        for cs in enriched_case_studies + enriched_industry_showcase:
             cs.relevance_note = relevance_map.get(cs.filename, "")
             cs.brief_description = briefs_map.get(cs.filename, "")
 
@@ -307,8 +313,10 @@ def synthesize_meeting_brief(
             key_themes=parsed.get("key_themes", []),
             suggested_questions=parsed.get("suggested_questions", []),
             recommended_case_studies=enriched_case_studies,
-            reference_capabilities=enriched_capability_docs,
+            industry_showcase=enriched_industry_showcase,
+            reference_capabilities=list(capability_docs) if capability_docs else [],
             conversation_flow=parsed.get("conversation_flow", []),
+            client_references=list(client_references) if client_references else [],
         )
 
     except Exception as e:
@@ -317,7 +325,9 @@ def synthesize_meeting_brief(
             meeting=meeting,
             attendee_insights=attendee_insights,
             recommended_case_studies=list(case_studies) if case_studies else [],
+            industry_showcase=list(industry_showcase) if industry_showcase else [],
             reference_capabilities=list(capability_docs) if capability_docs else [],
+            client_references=list(client_references) if client_references else [],
         )
 
 
