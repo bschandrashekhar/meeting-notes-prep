@@ -284,7 +284,7 @@ def search_client_references(
 
     # Known industry keywords to scan for in free text
     _INDUSTRY_KEYWORDS = {
-        "salesforce", "healthcare", "non profit", "npo", "manufacturing",
+        "healthcare", "non profit", "npo", "manufacturing",
         "financial services", "financial service", "loan", "lending", "banking",
         "education", "government", "retail", "logistics", "field services",
         "facility services", "mining", "telecom", "media & entertainment",
