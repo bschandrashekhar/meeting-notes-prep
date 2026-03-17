@@ -975,19 +975,19 @@ with tab_clients:
                         logo_html = ""
                         if client.get("logo_url"):
                             logo_html = (
-                                f'<img src="{client["logo_url"]}" width="48" height="48" '
-                                f'style="border-radius:8px;margin-bottom:6px;display:block;'
+                                f'<img src="{client["logo_url"]}" width="56" height="56" '
+                                f'style="border-radius:8px;margin-bottom:3px;display:block;'
                                 f'margin-left:auto;margin-right:auto;" />'
                             )
                         link = client.get("website_url", "#")
                         if link and not link.startswith("http"):
                             link = f"https://{link}"
                         st.markdown(
-                            f'<a href="{link}" target="_blank" style="text-decoration:none;display:block;text-align:center;padding:12px 4px;">'
+                            f'<a href="{link}" target="_blank" style="text-decoration:none;display:block;text-align:center;padding:6px 4px;line-height:1.2;">'
                             f'{logo_html}'
-                            f'<p style="margin:2px 0 0;font-size:0.8rem;color:#4a148c;font-weight:600;">{client["client_name"]}</p>'
-                            f'<p style="margin:1px 0 0;font-size:0.7rem;color:#999;">{client.get("industry", "")}</p>'
-                            f'<p style="margin:1px 0 0;font-size:0.65rem;color:#bbb;">{client.get("geography", "")}</p>'
+                            f'<p style="margin:1px 0 0;font-size:0.8rem;color:#4a148c;font-weight:600;line-height:1.15;">{client["client_name"]}</p>'
+                            f'<p style="margin:0;font-size:0.7rem;color:#999;line-height:1.15;">{client.get("industry", "")}</p>'
+                            f'<p style="margin:0;font-size:0.65rem;color:#bbb;line-height:1.15;">{client.get("geography", "")}</p>'
                             f'</a>',
                             unsafe_allow_html=True,
                         )
