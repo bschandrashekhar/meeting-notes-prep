@@ -290,6 +290,7 @@ def search_client_references(
         "facility services", "mining", "telecom", "media & entertainment",
         "hitech", "iot", "security", "consulting", "insurance", "real estate",
         "staffing services", "recruitment", "human resource", "law & legal",
+        "food",
     }
 
     # Collect prospect industry tags
