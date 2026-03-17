@@ -911,75 +911,57 @@ with tab_agenda:
 with tab_clients:
     st.markdown(
         '<p style="font-size: 0.85rem; color: #64748b; margin-bottom: 0.75rem;">'
-        'Search for clients by industry keyword or meeting agenda to find references in similar verticals.</p>',
+        'Select one or more industries to find clients in similar verticals.</p>',
         unsafe_allow_html=True,
     )
 
-    client_query = st.text_input(
-        "Industry / Keyword",
-        placeholder="e.g., healthcare, financial services, retail, manufacturing",
-        label_visibility="collapsed",
-        key="client_ref_input",
+    # Fetch all client references and build industry dropdown options
+    try:
+        supabase, _ = get_clients()
+        _cr_response = (
+            supabase.table("client_references")
+            .select("client_name, industry, geography, website_url, logo_url")
+            .execute()
+        )
+        _all_clients = _cr_response.data or []
+    except Exception as e:
+        st.error(f"Failed to load client references: {e}")
+        _all_clients = []
+
+    # Build sorted, deduplicated industry options (normalize casing)
+    _industry_set: dict[str, str] = {}  # lowercase -> display form
+    for row in _all_clients:
+        for tag in row.get("industry", "").split(","):
+            tag = tag.strip()
+            if tag and tag.lower() not in _industry_set:
+                _industry_set[tag.lower()] = tag
+    _industry_options = sorted(_industry_set.values(), key=str.lower)
+
+    selected_industries = st.multiselect(
+        "Filter by Industry",
+        options=_industry_options,
+        placeholder="Select industries...",
+        key="client_industry_select",
     )
 
-    if client_query:
-        _INDUSTRY_KEYWORDS = {
-            "salesforce", "healthcare", "non profit", "npo", "manufacturing",
-            "financial services", "financial service", "loan", "lending", "banking",
-            "education", "government", "retail", "logistics", "field services",
-            "facility services", "mining", "telecom", "media & entertainment",
-            "hitech", "iot", "security", "consulting", "insurance", "real estate",
-            "staffing services", "recruitment", "human resource", "law & legal",
-        }
+    if selected_industries:
+        selected_lower = {s.lower() for s in selected_industries}
 
-        # Extract industry signals from query
-        query_lower = client_query.lower()
-        query_tags = set()
-        for kw in _INDUSTRY_KEYWORDS:
-            if kw in query_lower:
-                query_tags.add(kw)
-        # Also treat each word as a potential tag
-        for word in query_lower.split():
-            if len(word) > 2:
-                query_tags.add(word.strip())
+        matched = []
+        for row in _all_clients:
+            row_tags = {t.strip().lower() for t in row.get("industry", "").split(",") if t.strip()}
+            overlap = len(selected_lower & row_tags)
+            if overlap > 0:
+                matched.append((overlap, row))
 
-        if not query_tags:
-            query_tags = {query_lower.strip()}
-
-        with st.spinner("Finding matching clients..."):
-            try:
-                supabase, _ = get_clients()
-                response = (
-                    supabase.table("client_references")
-                    .select("client_name, industry, geography, website_url, logo_url")
-                    .execute()
-                )
-
-                matched = []
-                for row in response.data or []:
-                    row_tags = {t.strip().lower() for t in row.get("industry", "").split(",") if t.strip()}
-                    overlap = len(query_tags & row_tags)
-                    # Also check partial matches
-                    if overlap == 0:
-                        for qt in query_tags:
-                            for rt in row_tags:
-                                if qt in rt or rt in qt:
-                                    overlap += 1
-                    if overlap > 0:
-                        matched.append((overlap, row))
-
-                matched.sort(key=lambda x: x[0], reverse=True)
-                clients_found = [m[1] for m in matched]
-
-            except Exception as e:
-                st.error(f"Failed to query client references: {e}")
-                clients_found = []
+        matched.sort(key=lambda x: x[0], reverse=True)
+        clients_found = [m[1] for m in matched]
 
         if not clients_found:
-            st.warning("No matching clients found for this query. Try a broader industry keyword.")
+            st.warning("No matching clients found.")
         else:
             st.markdown(
-                f'<div class="results-count">{len(clients_found)} clients in matching industries</div>',
+                f'<div class="results-count">{len(clients_found)} clients in selected industries</div>',
                 unsafe_allow_html=True,
             )
 
@@ -1010,7 +992,7 @@ with tab_clients:
                             unsafe_allow_html=True,
                         )
     else:
-        st.info("Enter an industry keyword or paste a meeting agenda to find clients in similar verticals.")
+        st.info("Select one or more industries above to see matching clients.")
 
 # --- Tab 4: Capability Documents ---
 with tab_capdocs:
