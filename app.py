@@ -975,7 +975,7 @@ with tab_clients:
                         logo_html = ""
                         if client.get("logo_url"):
                             logo_html = (
-                                f'<img src="{client["logo_url"]}" width="56" height="56" '
+                                f'<img src="{client["logo_url"]}" width="64" height="64" '
                                 f'style="border-radius:8px;margin-bottom:3px;display:block;'
                                 f'margin-left:auto;margin-right:auto;" />'
                             )
