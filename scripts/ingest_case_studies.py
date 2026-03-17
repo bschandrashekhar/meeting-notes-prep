@@ -42,6 +42,7 @@ logger = logging.getLogger(__name__)
 CASE_STUDIES_DIR = PROJECT_ROOT / "all_casestudies_for_rag"
 MASTERLIST_PATH = CASE_STUDIES_DIR / "Case_studies_masterlist.xlsx"
 TABLE_NAME = "case_studies"
+STORAGE_BUCKET = "case-studies"
 
 
 def load_masterlist() -> dict[str, dict]:
@@ -165,6 +166,16 @@ def generate_embedding(text: str, tags: str = "", industry: str = "", doc_type: 
     truncated = enriched_text[:16000] if len(enriched_text) > 16000 else enriched_text
     result = client.embed([truncated], model="voyage-3-large", input_type="document")
     return result.embeddings[0]
+
+
+def upload_pdf_to_storage(supabase, filename: str, path: Path) -> str:
+    """Upload a PDF to Supabase Storage and return its public URL."""
+    data = path.read_bytes()
+    supabase.storage.from_(STORAGE_BUCKET).upload(
+        filename, data,
+        file_options={"content-type": "application/pdf", "upsert": "true"},
+    )
+    return f"{SUPABASE_URL}/storage/v1/object/public/{STORAGE_BUCKET}/{filename}"
 
 
 def get_local_files() -> dict[str, Path]:
@@ -338,6 +349,13 @@ def sync(dry_run: bool = False, single_file: str | None = None, force: bool = Fa
             processed += 1
             logger.info("    Upserted successfully")
 
+            # Upload PDF to storage bucket
+            try:
+                upload_pdf_to_storage(supabase, filename, path)
+                logger.info("    Uploaded to storage: %s", filename)
+            except Exception as ue:
+                logger.warning("    Storage upload failed: %s", ue)
+
         except Exception as e:
             logger.error("  Failed to process %s: %s", filename, e)
 
@@ -356,13 +374,42 @@ def _count_pages(pdf_path: Path) -> int:
         return 0
 
 
+def upload_all_pdfs():
+    """Upload all local PDFs to Supabase Storage without re-processing metadata."""
+    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+        logger.error("SUPABASE_URL and SUPABASE_SERVICE_KEY must be set")
+        sys.exit(1)
+
+    supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+    local_files = get_local_files()
+    logger.info("Uploading %d PDFs to storage bucket '%s'...", len(local_files), STORAGE_BUCKET)
+
+    uploaded = 0
+    failed = 0
+    for filename, path in sorted(local_files.items()):
+        try:
+            upload_pdf_to_storage(supabase, filename, path)
+            uploaded += 1
+            logger.info("  [%d/%d] Uploaded: %s", uploaded + failed, len(local_files), filename)
+        except Exception as e:
+            failed += 1
+            logger.error("  [%d/%d] Failed: %s — %s", uploaded + failed, len(local_files), filename, e)
+
+    logger.info("Upload complete: %d uploaded, %d failed out of %d", uploaded, failed, len(local_files))
+
+
 def main():
     parser = argparse.ArgumentParser(description="Sync case study PDFs to Supabase vector store")
     parser.add_argument("--dry-run", action="store_true", help="Preview changes without applying")
     parser.add_argument("--file", type=str, default=None, help="Process a single file by name")
     parser.add_argument("--force", action="store_true", help="Re-process all files regardless of timestamps")
     parser.add_argument("--reembed-only", action="store_true", help="Reuse existing summaries, only regenerate embeddings")
+    parser.add_argument("--upload-only", action="store_true", help="Upload all PDFs to storage without re-processing")
     args = parser.parse_args()
+
+    if args.upload_only:
+        upload_all_pdfs()
+        return
 
     sync(dry_run=args.dry_run, single_file=args.file, force=args.force, reembed_only=args.reembed_only)
 
