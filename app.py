@@ -1065,10 +1065,13 @@ with tab_capdocs:
                     signed = supabase.storage.from_(STORAGE_BUCKET).create_signed_url(
                         doc["filename"], 3600
                     )
-                    if signed and signed.get("signedURL"):
-                        st.link_button("Download PDF", signed["signedURL"])
-                except Exception:
-                    pass
+                    url = None
+                    if isinstance(signed, dict):
+                        url = signed.get("signedURL") or signed.get("signedUrl")
+                    if url:
+                        st.link_button("Download PDF", url)
+                except Exception as e:
+                    st.caption(f"Download unavailable: {e}")
 
 # --- Tab 5: Settings ---
 with tab_settings:
