@@ -121,7 +121,7 @@ def get_meetings_for_date(target_date: date) -> list[MeetingInput]:
 
         meetings.append(
             MeetingInput(
-                subject=parsed.get("subject", event.get("summary", "")),
+                subject=parsed.get("subject") or event.get("summary", ""),
                 agenda=parsed.get("agenda", ""),
                 company_information=parsed.get("company_information", ""),
                 company_tech_info=parsed.get("company_tech_info", ""),
