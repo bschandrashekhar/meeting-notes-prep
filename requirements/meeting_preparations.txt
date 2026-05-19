@@ -57,11 +57,19 @@ pip install "git+https://github.com/bschandrashekhar/smo-cold-message.git"
 
   //Call the remaining steps
   For each meeting called "meeting_4_tomorrow" in "meetings_4_tomorrow" {
-    If (running on web) { assert meeting_4_tomorrow as "Meeting before enrichment: "};
+    If (running on web) { 
+      assert "Meeting before enrichment: "
+      assert individual fields of "meeting_4_tomorrow" with respective labels correctly identifying it. 
+    };
+
     meeting_4_tomorrow.Perform Step 1: Case Study Matching;
     meeting_4_tomorrow.Perform Step 2: Existing Client Matching;
     meeting_4_tomorrow.Perform Step 3: Brand Matching;
-    If (running on web) { assert meeting_4_tomorrow as "Meeting after enrichment: "};
+
+    If (running on web) { 
+      assert meeting_4_tomorrow as "Meeting after enrichment: "
+      assert individual fields of "meeting_4_tomorrow" with respective labels correctly identifying it. 
+    };
   };
 
   ### Step 1: Case Study Matching ###
