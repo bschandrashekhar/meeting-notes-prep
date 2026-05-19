@@ -1,0 +1,9 @@
+google-api-python-client>=2.149.0
+google-auth-httplib2>=0.2.0
+google-auth-oauthlib>=1.2.1
+anthropic>=0.49.0
+pydantic>=2.0
+python-dotenv>=1.0
+jinja2>=3.1
+streamlit>=1.38.0
+client-referencing @ git+https://github.com/bschandrashekhar/smo-cold-message.git

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;background:#f4f6f8;color:#333;">
+
+  <!-- Header -->
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#1a2332;">
+    <tr>
+      <td style="padding:24px 32px;">
+        <h1 style="margin:0;font-size:22px;color:#fff;">Meeting Prep Brief</h1>
+        <p style="margin:6px 0 0;font-size:14px;color:#8ca3c0;">
+          {{ meeting.input.start_time.strftime('%A, %B %d, %Y at %I:%M %p') }}
+        </p>
+      </td>
+    </tr>
+  </table>
+
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:720px;margin:24px auto;">
+
+    <!-- Subject -->
+    <tr>
+      <td style="padding:0 16px 16px;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:8px;border:1px solid #e2e8f0;">
+          <tr>
+            <td style="padding:20px 24px;">
+              <h2 style="margin:0 0 4px;font-size:18px;color:#1a2332;">{{ meeting.input.subject }}</h2>
+              {% if meeting.brand_result.brand %}
+              <span style="display:inline-block;padding:3px 10px;background:#e6f7f0;color:#0d7a4e;border-radius:12px;font-size:12px;font-weight:600;">
+                Brand: {{ meeting.brand_result.brand }}
+              </span>
+              {% endif %}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Agenda -->
+    <tr>
+      <td style="padding:0 16px 16px;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:8px;border:1px solid #e2e8f0;">
+          <tr>
+            <td style="padding:20px 24px;">
+              <h3 style="margin:0 0 10px;font-size:15px;color:#0d7a4e;text-transform:uppercase;letter-spacing:0.5px;">Agenda</h3>
+              <p style="margin:0;font-size:14px;line-height:1.6;white-space:pre-wrap;">{{ meeting.input.agenda }}</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Company Information -->
+    <tr>
+      <td style="padding:0 16px 16px;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:8px;border:1px solid #e2e8f0;">
+          <tr>
+            <td style="padding:20px 24px;">
+              <h3 style="margin:0 0 10px;font-size:15px;color:#0d7a4e;text-transform:uppercase;letter-spacing:0.5px;">Company Information</h3>
+              <p style="margin:0;font-size:14px;line-height:1.6;white-space:pre-wrap;">{{ meeting.input.company_information }}</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Company Tech Background -->
+    {% if meeting.input.company_tech_info %}
+    <tr>
+      <td style="padding:0 16px 16px;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:8px;border:1px solid #e2e8f0;">
+          <tr>
+            <td style="padding:20px 24px;">
+              <h3 style="margin:0 0 10px;font-size:15px;color:#0d7a4e;text-transform:uppercase;letter-spacing:0.5px;">Company Tech Background</h3>
+              <p style="margin:0;font-size:14px;line-height:1.6;white-space:pre-wrap;">{{ meeting.input.company_tech_info }}</p>
+              {% if meeting.prospect_technologies %}
+              <p style="margin:12px 0 0;font-size:13px;color:#64748b;">
+                <strong>Extracted Technologies:</strong>
+                {% for tech in meeting.prospect_technologies %}
+                <span style="display:inline-block;padding:2px 8px;margin:2px;background:#f1f5f9;border-radius:4px;font-size:12px;">{{ tech }}</span>
+                {% endfor %}
+              </p>
+              {% endif %}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    {% endif %}
+
+    <!-- Company Industry & Country -->
+    <tr>
+      <td style="padding:0 16px 16px;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:8px;border:1px solid #e2e8f0;">
+          <tr>
+            <td style="padding:20px 24px;">
+              <h3 style="margin:0 0 10px;font-size:15px;color:#0d7a4e;text-transform:uppercase;letter-spacing:0.5px;">Company Industry</h3>
+              <p style="margin:0;font-size:14px;">{{ meeting.input.prospect_industry }} &nbsp;|&nbsp; {{ meeting.input.company_country }} ({{ meeting.normalized_country }})</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Attendees -->
+    {% if meeting.input.attendees %}
+    <tr>
+      <td style="padding:0 16px 16px;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:8px;border:1px solid #e2e8f0;">
+          <tr>
+            <td style="padding:20px 24px;">
+              <h3 style="margin:0 0 12px;font-size:15px;color:#0d7a4e;text-transform:uppercase;letter-spacing:0.5px;">Attendees</h3>
+              <table width="100%" cellpadding="0" cellspacing="0">
+                {% for att in meeting.input.attendees %}
+                <tr>
+                  <td style="padding:8px 0;border-bottom:1px solid #f1f5f9;">
+                    <strong style="font-size:14px;">{{ loop.index }}. {{ att.name }}</strong>
+                    {% if att.title %}
+                    <br><span style="font-size:13px;color:#64748b;">{{ att.title }}</span>
+                    {% endif %}
+                    {% if att.linkedin_url %}
+                    <br><a href="{{ att.linkedin_url }}" style="font-size:12px;color:#0077b5;text-decoration:none;">LinkedIn Profile &rarr;</a>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% endfor %}
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    {% endif %}
+
+    <!-- Case Studies to Reference -->
+    {% if meeting.case_study_narrative %}
+    <tr>
+      <td style="padding:0 16px 16px;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:8px;border:1px solid #e2e8f0;">
+          <tr>
+            <td style="padding:20px 24px;">
+              <h3 style="margin:0 0 12px;font-size:15px;color:#0d7a4e;text-transform:uppercase;letter-spacing:0.5px;">Case Studies to Reference</h3>
+              <table width="100%" cellpadding="0" cellspacing="0">
+                {% for bullet in meeting.case_study_narrative %}
+                <tr>
+                  <td style="padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:14px;line-height:1.6;">
+                    <span style="color:#0d7a4e;font-weight:bold;margin-right:6px;">&#9679;</span>
+                    {{ bullet }}
+                  </td>
+                </tr>
+                {% endfor %}
+              </table>
+
+              <!-- Case study details -->
+              {% if meeting.case_study_matches %}
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:16px;background:#f8fafc;border-radius:6px;">
+                <tr>
+                  <td style="padding:12px 16px;">
+                    <p style="margin:0 0 8px;font-size:12px;color:#64748b;font-weight:600;text-transform:uppercase;">Matched Case Studies</p>
+                    {% for cs in meeting.case_study_matches %}
+                    <p style="margin:4px 0;font-size:13px;">
+                      <strong>{{ cs.casestudy_name }}</strong>
+                      {% if cs.exact_techs %}<br><span style="color:#64748b;">Exact: {{ cs.exact_techs | join(', ') }}</span>{% endif %}
+                      {% if cs.semantic_techs %}<br><span style="color:#64748b;">Semantic: {{ cs.semantic_techs | map(attribute=0) | list | join(', ') if cs.semantic_techs[0] is iterable else '' }}</span>{% endif %}
+                    </p>
+                    {% endfor %}
+                  </td>
+                </tr>
+              </table>
+              {% endif %}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    {% endif %}
+
+    <!-- Existing Clients to Reference -->
+    {% if meeting.client_matches %}
+    <tr>
+      <td style="padding:0 16px 16px;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:8px;border:1px solid #e2e8f0;">
+          <tr>
+            <td style="padding:20px 24px;">
+              <h3 style="margin:0 0 16px;font-size:15px;color:#0d7a4e;text-transform:uppercase;letter-spacing:0.5px;">Existing Clients to Reference</h3>
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  {% for client in meeting.client_matches %}
+                  <td style="text-align:center;padding:8px 12px;vertical-align:top;width:{{ (100 / meeting.client_matches|length)|int }}%;">
+                    {% if client.logo_url %}
+                    <img src="{{ client.logo_url }}" alt="{{ client.client_name }}" style="width:64px;height:64px;object-fit:contain;border-radius:8px;border:1px solid #e2e8f0;background:#fff;" />
+                    {% else %}
+                    <div style="width:64px;height:64px;margin:0 auto;background:#f1f5f9;border-radius:8px;border:1px solid #e2e8f0;line-height:64px;font-size:24px;color:#94a3b8;">&#9679;</div>
+                    {% endif %}
+                    <br>
+                    {% if client.client_url %}
+                    <a href="{{ client.client_url }}" style="font-size:12px;color:#1a2332;text-decoration:none;font-weight:600;line-height:1.3;">{{ client.client_name }}</a>
+                    {% else %}
+                    <span style="font-size:12px;color:#1a2332;font-weight:600;line-height:1.3;">{{ client.client_name }}</span>
+                    {% endif %}
+                  </td>
+                  {% if loop.index == 3 and meeting.client_matches|length > 3 %}
+                </tr>
+                <tr>
+                  {% endif %}
+                  {% endfor %}
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    {% endif %}
+
+  </table>
+
+  <!-- Footer -->
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f8;">
+    <tr>
+      <td style="padding:16px 32px;text-align:center;">
+        <p style="margin:0;font-size:11px;color:#94a3b8;">
+          Generated by Meeting Preparation Pipeline &bull; {{ generated_at }}
+        </p>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>

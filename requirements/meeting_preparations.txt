@@ -1,0 +1,152 @@
+# Meeting Preperation Pipeline Orchestration #
+Important: This project depends on the client_referencing package from the smo-cold-message GitHub repo. Install it with:
+pip install "git+https://github.com/bschandrashekhar/smo-cold-message.git"
+
+## Definitions ##
+  TECHNOLOGY_RESEARCH = { technology 1, technology 2, technology 3, technology 4 ...} 
+
+  SYSTEM_PROMPT = """
+    You will be given "COMPANY_TECH_INFO" for a prospect company. Based solely on these snippets, populate the TECHNOLOGY_RESEARCH dictionary. Only include technologies within the input "COMPANY_TECH_INFO".
+
+  Following is template structure of "case_study_matching_result".
+  case_study_matching_result
+    [
+      {
+          "casestudy_name": "Pharma Order Pipeline Automation",
+          "exact_techs": ["salesforce", "mulesoft"],
+          "semantic_techs": [{"prospect_tech": "snowflake", "matched_tech": "Fabric"}],
+          "summary_solution": "Implemented Salesforce, Mulesoft integration...",
+      },
+      {
+          "casestudy_name": "Loan Origination Platform",
+          "exact_techs": ["salesforce"],
+          "semantic_techs": [],
+          "summary_solution": "Built Salesforce Service Cloud workflow...",
+      }
+    ];
+
+  Following is template structure of "existing_client_matching_result".
+  existing_client_matching_result
+    {
+        "client_names": "MedTech Corp, FinServ Global, FinServ Global...",
+        "client_urls" : "url1, url2, url3..."
+    }
+
+## Stage 1: Read Google Calendar ##
+  If (running on web) {Give an option to select the date, call the label "Select Date to read Meetings" and value is "tdate"};
+
+  Run this as a cron job every day at 3:00 PM IST (call it "tdate");
+
+  From Google Calendar (configured via CALENDAR_NAME) pull the upcoming meetings for tomorrow's date (tdate + 1) in IST along with attendee lists. Do not run this cron job if it is Friday or Saturday. Call this list of meetings as "meetings_4_tomorrow";
+
+  Read the calendar event body's description as per the format (this acts as the input) for each meeting as "meeting_4_tomorrow" and store it in the list "meetings_4_tomorrow":
+    - Agenda: (Mandatory). It captures the meeting topic to be used further as below. Contains meeting agenda text. Call this field as "meeting_4_tomorrow.AGENDA".
+    - Company Information:(Mandatory). Contains company contextual information like overview, size, revenue, location etc. Call this field as "meeting_4_tomorrow.COMPANY_INFORMATION".
+    - Company Tech Background:(Optional). Contains company technology related information. Tech platforms being used, IT team size, any tech initiatives. Limit this field for only tech information. Call this field as "meeting_4_tomorrow.COMPANY_TECH_INFO".
+    - Company Industry:(Mandatory) Industry Domain of the prospect company. Call this field as "meeting_4_tomorrow.PROSPECT_INDUSTRY".
+    - Company Country:(Mandatory) Country of the prospect company. Call this field as "meeting_4_tomorrow.COMPANY_COUNTRY".
+    - Attendees:(Mandatory). Attendee names are listed in bullets/numbers with name and designation and LinkedIn URL. 
+      1. Full Name (must)
+        - Title: (must) 
+        - LinkedIn URL: (optional)
+      2. Full Name (must)
+        - Title: (must) 
+        - LinkedIn URL: (optional)
+    - Attachment (in the email itself) which could be multiple. Call it meeting_4_tomorrow.ALL_ATTACHMENTS.
+    - Subject: (Mandatory) The subject line of the email, store it as meeting_4_tomorrow.SUBJECT;
+
+  //Call the remaining steps
+  For each meeting called "meeting_4_tomorrow" in "meetings_4_tomorrow" {
+    If (running on web) { assert meeting_4_tomorrow as "Meeting before enrichment: "};
+    meeting_4_tomorrow.Perform Step 1: Case Study Matching;
+    meeting_4_tomorrow.Perform Step 2: Existing Client Matching;
+    meeting_4_tomorrow.Perform Step 3: Brand Matching;
+    If (running on web) { assert meeting_4_tomorrow as "Meeting after enrichment: "};
+  };
+
+  ### Step 1: Case Study Matching ###
+    //Search the internal case study library for relevant case studies to recommend for the meeting.  
+    meeting_4_tomorrow.PROSPECT_CONTEXT = meeting_4_tomorrow.AGENDA + meeting_4_tomorrow.COMPANY_INFORMATION + meeting_4_tomorrow.COMPANY_TECH_INFO;
+
+    meeting_4_tomorrow.PROSPECT_TECHNOLOGIES = Make a Single Claude API call for extracting from COMPANY_TECH_INFO;
+
+    //This function is a reusable routine available in the SMO Python Package that we have built already.
+    case_study_matching_result = find_casestudy_matches(
+        prospect_context = meeting_4_tomorrow.PROSPECT_CONTEXT,
+        prospect_industry = meeting_4_tomorrow.PROSPECT_INDUSTRY,
+        prospect_technologies = meeting_4_tomorrow.PROSPECT_TECHNOLOGIES,
+        max_matches = 5
+    );
+    meeting_4_tomorrow.case_study_matching_result = case_study_matching_result;
+
+  ### Step 2: Existing Client Matching ###
+    //Search the internal case study library for relevant case studies to recommend for the meeting. Call find_matches with the parameters as mentioned below. 
+
+    Modify "meeting_4_tomorrow.PROSPECT_COUNTRY" field from the input as follows: 
+    {
+      - Use "meeting_4_tomorrow.PROSPECT_COUNTRY" field as "EMEA" for all the countries that are in Middle East, and Africa.
+      - Use "meeting_4_tomorrow.PROSPECT_COUNTRY" field as "USA" for input that says "United States", "United States of America" or "America".
+      - Use "meeting_4_tomorrow.PROSPECT_COUNTRY" field as "UK" for input that says "United Kingdom", "Great Britain", "GB" or "Britain".
+      - Make sure that "meeting_4_tomorrow.PROSPECT_COUNTRY" field is mapped to "EMEA", "USA", "Australia", "Canada" & "UK" only. Any country that skips the above mentioned 3 conditions, should have "meeting_4_tomorrow.PROSPECT_COUNTRY" field default to "USA".
+    }
+
+    Update the "meeting_4_tomorrow.PROSPECT_COUNTRY" field accordingly;
+
+    //This function is a reusable routine available in the SMO Python Package that we have built already.
+    existing_client_matching_result = find_matches(
+        prospect_industry: meeting_4_tomorrow.PROSPECT_INDUSTRY,
+        prospect_technologies: meeting_4_tomorrow.PROSPECT_TECHNOLOGIES, 
+        prospect_country: meeting_4_tomorrow.PROSPECT_COUNTRY,
+        max_matches: 5
+    );
+    meeting_4_tomorrow.existing_client_matching_result = existing_client_matching_result;
+
+  ### Step 3: Brand Matching ###
+    //Suggest the brand name to use to the prospect
+    brand_result = find_brand_match(
+      prospect_industry = meeting_4_tomorrow.PROSPECT_INDUSTRY
+    );
+    meeting_4_tomorrow.brand_result = brand_result;
+    
+
+##  Stage 2 — Synthesize the meeting brief email ##
+For each "meeting_4_tomorrow" in the list "meetings_4_tomorrow".  Prepare an email to be sent, call it "EMAIL_4_MEETING" containing:
+  {
+    - The subject of the EMAIL_4_MEETING = meeting_4_tomorrow.SUBJECT;
+    - Attach meeting_4_tomorrow.ALL_ATTACHMENTS to EMAIL_4_MEETING;
+    - Body text of EMAIL_4_MEETING (The order of content should be as follows):
+      - Agenda: meeting_4_tomorrow.AGENDA;
+      - Company Information: meeting_4_tomorrow.COMPANY_INFORMATION;
+      - Company Tech Background:meeting_4_tomorrow.COMPANY_TECH_INFO;
+      - Company Industry:meeting_4_tomorrow.COMPANY_COUNTRY;
+      - Attendees: As is from the original email body
+        1. Full Name (must)
+          - Title: (must) 
+          - LinkedIn URL: (optional)
+        2. Full Name (must)
+          - Title: (must) 
+          - LinkedIn URL: (optional)
+
+      - Casestudies to Reference:
+        - Utilize each casestudy i.e. meeting_4_tomorrow.case_study_matching_result.summary_solution & meeting_4_tomorrow.prospect_context to weave a conversational flow for all the individual casestudies;
+        - The resultant flow should be presented in bullets to follow easily.
+
+      - Existing Clients to Reference:
+        - Display the logos of all the matching clients from the list "meeting_4_tomorrow.existing_client_matching_result";
+        - Underneath each logo should be the name of the client in text but clickable to their respective URL; 
+      
+    - If (running on web) { assert EMAIL_4_MEETING as "Final eMail: "};
+
+    - Send the email EMAIL_4_MEETING to "sateesh@mindruby.com";
+  }
+
+
+//Consideration for email generation:
+//- Per-attendee cards: ZoomInfo data, research summary, talking points
+//- Key themes and suggested questions for the meeting
+//- Research Summary
+//- Talking Points
+//- Suggested Questions
+//- Conversation Flow — How to Weave in Case Studies
+//- Top Case Studies to Reference
+//- Each section to have bullets

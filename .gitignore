@@ -1,0 +1,11 @@
+.env
+.venv/
+token.json
+credentials.json
+__pycache__/
+logs/
+*.pyc
+*.egg-info/
+dist/
+build/
+.streamlit/secrets.toml
