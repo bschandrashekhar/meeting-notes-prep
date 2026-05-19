@@ -145,33 +145,48 @@ def get_meetings_for_date(target_date: date) -> list[MeetingInput]:
 
 # Recognised section headers (case-insensitive)
 _HEADERS = [
-    ("agenda", re.compile(r"^agenda\s*:", re.IGNORECASE)),
-    ("company_information", re.compile(r"^company\s+information\s*:", re.IGNORECASE)),
-    ("company_tech_info", re.compile(r"^company\s+tech\s+background\s*:", re.IGNORECASE)),
-    ("prospect_industry", re.compile(r"^company\s+industry\s*:", re.IGNORECASE)),
-    ("company_country", re.compile(r"^company\s+country\s*:", re.IGNORECASE)),
-    ("attendees", re.compile(r"^attendees\s*:", re.IGNORECASE)),
-    ("subject", re.compile(r"^subject\s*:", re.IGNORECASE)),
+    ("agenda", re.compile(r"^agenda\s*:+", re.IGNORECASE)),
+    ("company_information", re.compile(r"^company\s+information\s*:+", re.IGNORECASE)),
+    ("company_tech_info", re.compile(r"^company\s+tech\s+background\s*:+", re.IGNORECASE)),
+    ("prospect_industry", re.compile(r"^company\s+industry\s*:+", re.IGNORECASE)),
+    ("company_country", re.compile(r"^company\s+country\s*:+", re.IGNORECASE)),
+    ("attendees", re.compile(r"^attendees\s*:+", re.IGNORECASE)),
+    ("subject", re.compile(r"^subject\s*:+", re.IGNORECASE)),
 ]
 
 
 def _match_header(line: str) -> tuple[str | None, str]:
     """If *line* starts with a known header, return (key, remainder). Else (None, line)."""
-    stripped = line.strip()
+    # Strip leading bullets/dashes and whitespace
+    stripped = re.sub(r"^[-–•]\s*", "", line.strip())
     for key, pattern in _HEADERS:
         m = pattern.match(stripped)
         if m:
             remainder = stripped[m.end():].strip()
+            # Strip trailing punctuation left over (e.g. "Attendees:.")
+            remainder = re.sub(r"^[.\s]+", "", remainder)
             return key, remainder
     return None, line
 
 
 def _parse_description(description: str) -> dict[str, Any]:
     """Parse the structured calendar event description into a dict."""
-    # Normalise HTML line breaks that Google Calendar sometimes injects
-    text = description.replace("<br>", "\n").replace("<br/>", "\n").replace("<br />", "\n")
+    text = description
+    # Convert block-level closing tags to newlines
+    text = re.sub(r"</(?:p|div|li|ol|ul|tr)>", "\n", text, flags=re.IGNORECASE)
+    # Convert <br> variants to newlines
+    text = re.sub(r"<br\s*/?>", "\n", text, flags=re.IGNORECASE)
+    # Strip inline formatting tags (bold, italic, links keep text)
+    text = re.sub(r"<(?:strong|b|em|i|u|span)[^>]*>", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"</(?:strong|b|em|i|u|span)>", "", text, flags=re.IGNORECASE)
+    # Extract href from links and keep the text
+    text = re.sub(r'<a\s[^>]*href="([^"]*)"[^>]*>[^<]*</a>', r"\1", text, flags=re.IGNORECASE)
     # Strip any remaining HTML tags
     text = re.sub(r"<[^>]+>", "", text)
+    # Normalise non-breaking spaces and HTML entities
+    text = text.replace("\xa0", " ")
+    text = text.replace("&nbsp;", " ")
+    text = text.replace("&amp;", "&")
 
     lines = text.splitlines()
 
@@ -225,7 +240,10 @@ def _parse_attendees(lines: list[str]) -> list[Attendee]:
         if m:
             if current:
                 attendees.append(Attendee(**current))
-            current = {"name": m.group(1).strip(), "title": "", "linkedin_url": ""}
+            name = m.group(1).strip()
+            # Strip "Full Name :" placeholder prefix if present
+            name = re.sub(r"^full\s+name\s*:\s*", "", name, flags=re.IGNORECASE)
+            current = {"name": name.strip(), "title": "", "linkedin_url": ""}
             continue
 
         if current is None:
