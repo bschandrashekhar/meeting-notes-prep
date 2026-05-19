@@ -26,7 +26,6 @@ with st.sidebar:
     st.header("Settings")
     tomorrow = datetime.now(IST).date() + timedelta(days=1)
     tdate = st.date_input("Select Date to read Meetings", value=tomorrow)
-    to_email = st.text_input("Send briefs to", value=TARGET_EMAIL)
     run_btn = st.button("🚀 Run Pipeline", type="primary", use_container_width=True)
 
 # ---------------------------------------------------------------------------
@@ -113,18 +112,20 @@ if run_btn:
             html = render_meeting_email(enriched)
             st.components.v1.html(html, height=800, scrolling=True)
 
-    # ── Stage 2: Send emails via Resend ─────────────────────────────────
+    # ── Stage 2: Optional email sending ─────────────────────────────────
     st.divider()
-    st.subheader("Send Emails")
+    send_emails = st.checkbox("Send emails after preview", value=False)
 
-    if st.button("📤 Send All Emails", type="secondary"):
-        sent = 0
-        for enriched in enriched_list:
-            if send_meeting_email(enriched, to_email=to_email):
-                sent += 1
-                st.success(f"Sent: {enriched.input.subject}")
-            else:
-                st.error(f"Failed: {enriched.input.subject}")
-        st.info(f"Sent {sent}/{len(enriched_list)} email(s) to {to_email}")
+    if send_emails:
+        to_email = st.text_input("Send briefs to", value="bschandrashekhar@yahoo.com")
+        if st.button("📤 Send All Emails", type="secondary"):
+            sent = 0
+            for enriched in enriched_list:
+                if send_meeting_email(enriched, to_email=to_email):
+                    sent += 1
+                    st.success(f"Sent: {enriched.input.subject}")
+                else:
+                    st.error(f"Failed: {enriched.input.subject}")
+            st.info(f"Sent {sent}/{len(enriched_list)} email(s) to {to_email}")
 
     status.update(label=f"Pipeline complete — {len(enriched_list)} meeting(s) processed", state="complete")

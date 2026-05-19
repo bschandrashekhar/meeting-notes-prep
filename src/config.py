@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 # Paths
 # ---------------------------------------------------------------------------
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-load_dotenv(PROJECT_ROOT / ".env")
+load_dotenv(PROJECT_ROOT / ".env", override=True)
 
 # ---------------------------------------------------------------------------
 # Helper (supports Streamlit Cloud secrets + local .env)
@@ -45,14 +45,11 @@ RESEND_API_KEY = _get_secret("RESEND_API_KEY")
 RESEND_FROM = _get_secret("RESEND_FROM") or "Meeting Prep <meetings@mindruby.com>"
 
 # ---------------------------------------------------------------------------
-# Google OAuth
+# Google Service Account
 # ---------------------------------------------------------------------------
-GOOGLE_CREDENTIALS_FILE = PROJECT_ROOT / "credentials.json"
-GOOGLE_TOKEN_FILE = PROJECT_ROOT / "token.json"
+GOOGLE_SERVICE_ACCOUNT_KEY = _get_secret("GOOGLE_SERVICE_ACCOUNT_KEY")
 GOOGLE_SCOPES = [
     "https://www.googleapis.com/auth/calendar.readonly",
-    "https://www.googleapis.com/auth/gmail.send",
-    "https://www.googleapis.com/auth/drive.readonly",
 ]
 
 # ---------------------------------------------------------------------------

@@ -1,21 +1,19 @@
-"""Google Calendar integration — OAuth, event fetching, description parsing."""
+"""Google Calendar integration — Service Account auth, event fetching, description parsing."""
 
 from __future__ import annotations
 
+import json
 import logging
 import re
 from datetime import date, datetime, time
 from typing import Any
 
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
+from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 
 from src.config import (
-    GOOGLE_CREDENTIALS_FILE,
+    GOOGLE_SERVICE_ACCOUNT_KEY,
     GOOGLE_SCOPES,
-    GOOGLE_TOKEN_FILE,
     CALENDAR_NAME,
     IST,
 )
@@ -24,28 +22,13 @@ from src.models import Attendee, MeetingInput
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# OAuth
+# Service Account auth
 # ---------------------------------------------------------------------------
 
 def authenticate() -> Credentials:
-    """Return valid Google credentials, refreshing or re-authing as needed."""
-    creds: Credentials | None = None
-
-    if GOOGLE_TOKEN_FILE.exists():
-        creds = Credentials.from_authorized_user_file(
-            str(GOOGLE_TOKEN_FILE), GOOGLE_SCOPES
-        )
-
-    if creds and creds.expired and creds.refresh_token:
-        creds.refresh(Request())
-        GOOGLE_TOKEN_FILE.write_text(creds.to_json())
-    elif not creds or not creds.valid:
-        flow = InstalledAppFlow.from_client_secrets_file(
-            str(GOOGLE_CREDENTIALS_FILE), GOOGLE_SCOPES
-        )
-        creds = flow.run_local_server(port=0)
-        GOOGLE_TOKEN_FILE.write_text(creds.to_json())
-
+    """Return Google credentials from the Service Account key (JSON string)."""
+    key_data = json.loads(GOOGLE_SERVICE_ACCOUNT_KEY)
+    creds = Credentials.from_service_account_info(key_data, scopes=GOOGLE_SCOPES)
     return creds
 
 
@@ -54,7 +37,21 @@ def authenticate() -> Credentials:
 # ---------------------------------------------------------------------------
 
 def _find_calendar_id(service: Any) -> str:
-    """Find the calendar ID by display name (CALENDAR_NAME)."""
+    """Resolve the calendar ID from CALENDAR_NAME.
+
+    CALENDAR_NAME can be either a calendar ID (e.g. "abc@group.calendar.google.com")
+    or a display name. For service accounts, shared calendars don't appear in
+    calendarList automatically, so we try CALENDAR_NAME as a direct ID first.
+    """
+    # Try CALENDAR_NAME as a direct calendar ID
+    try:
+        cal = service.calendars().get(calendarId=CALENDAR_NAME).execute()
+        logger.info("Calendar resolved by ID: %s", cal.get("summary", CALENDAR_NAME))
+        return CALENDAR_NAME
+    except Exception:
+        pass
+
+    # Fall back to searching by display name
     page_token = None
     while True:
         calendars = service.calendarList().list(pageToken=page_token).execute()
@@ -66,7 +63,9 @@ def _find_calendar_id(service: Any) -> str:
             break
     raise ValueError(
         f"Calendar '{CALENDAR_NAME}' not found. "
-        "Check CALENDAR_NAME in .env and ensure it matches exactly."
+        "Set CALENDAR_NAME to the Calendar ID from Google Calendar settings "
+        "(under Integrate calendar), or ensure the calendar is shared with "
+        "the service account."
     )
 
 

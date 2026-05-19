@@ -45,11 +45,11 @@ def _fetch_attachments(att_list: list[dict]) -> list[dict]:
     """Fetch calendar attachments from Google Drive.
 
     Returns a list of Resend attachment dicts: [{filename, content}].
-    Only works locally where token.json exists.
+    Requires the service account to have Drive read access.
     """
-    from src.config import GOOGLE_TOKEN_FILE
+    from src.config import GOOGLE_SERVICE_ACCOUNT_KEY
 
-    if not att_list or not GOOGLE_TOKEN_FILE.exists():
+    if not att_list or not GOOGLE_SERVICE_ACCOUNT_KEY:
         return []
 
     try:
