@@ -50,6 +50,7 @@ RESEND_FROM = _get_secret("RESEND_FROM") or "Meeting Prep <meetings@mindruby.com
 GOOGLE_SERVICE_ACCOUNT_KEY = _get_secret("GOOGLE_SERVICE_ACCOUNT_KEY")
 GOOGLE_SCOPES = [
     "https://www.googleapis.com/auth/calendar.readonly",
+    "https://www.googleapis.com/auth/drive.readonly",
 ]
 
 # ---------------------------------------------------------------------------
