@@ -20,6 +20,16 @@ st.set_page_config(
 st.title("Meeting Preparation Pipeline")
 
 # ---------------------------------------------------------------------------
+# Session state init
+# ---------------------------------------------------------------------------
+if "enriched_list" not in st.session_state:
+    st.session_state.enriched_list = []
+if "meetings_raw" not in st.session_state:
+    st.session_state.meetings_raw = []
+if "pipeline_done" not in st.session_state:
+    st.session_state.pipeline_done = False
+
+# ---------------------------------------------------------------------------
 # Sidebar
 # ---------------------------------------------------------------------------
 with st.sidebar:
@@ -29,9 +39,14 @@ with st.sidebar:
     run_btn = st.button("🚀 Run Pipeline", type="primary", use_container_width=True)
 
 # ---------------------------------------------------------------------------
-# Main
+# Run pipeline (only when button is clicked)
 # ---------------------------------------------------------------------------
 if run_btn:
+    # Clear previous results
+    st.session_state.enriched_list = []
+    st.session_state.meetings_raw = []
+    st.session_state.pipeline_done = False
+
     status = st.status("Running pipeline …", expanded=True)
 
     # ── Stage 1A: Fetch meetings ─────────────────────────────────────────
@@ -44,9 +59,27 @@ if run_btn:
         st.info(f"No meetings found on the calendar for {tdate}.")
         st.stop()
 
+    st.session_state.meetings_raw = meetings
     enriched_list = []
 
     for idx, meeting in enumerate(meetings):
+        status.write(f"Enriching: **{meeting.subject}** …")
+        with st.spinner(f"Enriching {meeting.subject} …"):
+            enriched = enrich_meeting(meeting)
+        enriched_list.append(enriched)
+
+    st.session_state.enriched_list = enriched_list
+    st.session_state.pipeline_done = True
+    status.update(label=f"Pipeline complete — {len(enriched_list)} meeting(s) processed", state="complete")
+
+# ---------------------------------------------------------------------------
+# Display results (persists across re-runs via session_state)
+# ---------------------------------------------------------------------------
+if st.session_state.pipeline_done:
+    meetings = st.session_state.meetings_raw
+    enriched_list = st.session_state.enriched_list
+
+    for idx, (meeting, enriched) in enumerate(zip(meetings, enriched_list)):
         meeting_label = f"Meeting {idx + 1}: {meeting.subject}"
 
         # ── Before enrichment ────────────────────────────────────────────
@@ -74,15 +107,8 @@ if run_btn:
                             parts.append(f" ([LinkedIn]({att.linkedin_url}))")
                         st.markdown("".join(parts))
 
-        # ── Enrich ───────────────────────────────────────────────────────
-        status.write(f"Enriching: **{meeting.subject}** …")
-        with st.spinner(f"Enriching {meeting.subject} …"):
-            enriched = enrich_meeting(meeting)
-        enriched_list.append(enriched)
-
         # ── After enrichment ─────────────────────────────────────────────
         with st.expander(f"✅ {meeting_label} — After Enrichment", expanded=False):
-            # Original meeting fields
             col1, col2 = st.columns(2)
             with col1:
                 st.markdown("**Subject:** " + enriched.input.subject)
@@ -108,7 +134,6 @@ if run_btn:
 
             st.divider()
 
-            # Enrichment results
             col3, col4 = st.columns(2)
             with col3:
                 st.markdown("**Extracted Technologies:**")
@@ -154,5 +179,3 @@ if run_btn:
                 else:
                     st.error(f"Failed: {enriched.input.subject}")
             st.info(f"Sent {sent}/{len(enriched_list)} email(s) to {to_email}")
-
-    status.update(label=f"Pipeline complete — {len(enriched_list)} meeting(s) processed", state="complete")
