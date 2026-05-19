@@ -41,6 +41,8 @@ APOLLO_API_KEY = _get_secret("APOLLO_API_KEY")
 # ---------------------------------------------------------------------------
 CALENDAR_NAME = _get_secret("CALENDAR_NAME") or "MyClientMeetings"
 TARGET_EMAIL = _get_secret("TARGET_EMAIL") or "sateesh@mindruby.com"
+RESEND_API_KEY = _get_secret("RESEND_API_KEY")
+RESEND_FROM = _get_secret("RESEND_FROM") or "Meeting Prep <meetings@mindruby.com>"
 
 # ---------------------------------------------------------------------------
 # Google OAuth

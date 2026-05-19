@@ -1,22 +1,21 @@
-"""Email composer — Jinja2 rendering + Gmail API send with attachments."""
+"""Email composer — Jinja2 rendering + Resend API for sending."""
 
 from __future__ import annotations
 
 import base64
 import logging
 from datetime import datetime
-from email.mime.application import MIMEApplication
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 
-from googleapiclient.discovery import build
+import resend
 from jinja2 import Environment, FileSystemLoader
 
-from src.config import ANTHROPIC_MODEL, TARGET_EMAIL, TEMPLATES_DIR
+from src.config import ANTHROPIC_MODEL, RESEND_API_KEY, RESEND_FROM, TARGET_EMAIL, TEMPLATES_DIR
 from src.google_calendar import authenticate
 from src.models import EnrichedMeeting
 
 logger = logging.getLogger(__name__)
+
+resend.api_key = RESEND_API_KEY
 
 
 # ---------------------------------------------------------------------------
@@ -39,21 +38,45 @@ def render_meeting_email(meeting: EnrichedMeeting) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Attachment fetching (Google Drive)
+# Attachment fetching (Google Drive — only when token.json exists locally)
 # ---------------------------------------------------------------------------
 
-def _fetch_attachment(drive_service, file_id: str) -> tuple[str, bytes, str] | None:
-    """Download a file from Google Drive by its file ID.
+def _fetch_attachments(att_list: list[dict]) -> list[dict]:
+    """Fetch calendar attachments from Google Drive.
 
-    Returns (filename, content_bytes, mime_type) or None on failure.
+    Returns a list of Resend attachment dicts: [{filename, content}].
+    Only works locally where token.json exists.
     """
+    from src.config import GOOGLE_TOKEN_FILE
+
+    if not att_list or not GOOGLE_TOKEN_FILE.exists():
+        return []
+
     try:
-        meta = drive_service.files().get(fileId=file_id, fields="name,mimeType").execute()
-        content = drive_service.files().get_media(fileId=file_id).execute()
-        return meta["name"], content, meta.get("mimeType", "application/octet-stream")
+        from googleapiclient.discovery import build
+
+        creds = authenticate()
+        drive = build("drive", "v3", credentials=creds)
     except Exception as e:
-        logger.warning("Failed to fetch attachment %s: %s", file_id, e)
-        return None
+        logger.warning("Cannot access Google Drive for attachments: %s", e)
+        return []
+
+    attachments = []
+    for att_meta in att_list:
+        file_id = att_meta.get("file_id", "")
+        if not file_id:
+            continue
+        try:
+            meta = drive.files().get(fileId=file_id, fields="name,mimeType").execute()
+            content = drive.files().get_media(fileId=file_id).execute()
+            attachments.append({
+                "filename": meta["name"],
+                "content": list(content),  # Resend expects bytes-like content
+            })
+        except Exception as e:
+            logger.warning("Failed to fetch attachment %s: %s", file_id, e)
+
+    return attachments
 
 
 # ---------------------------------------------------------------------------
@@ -64,50 +87,23 @@ def send_meeting_email(
     enriched: EnrichedMeeting,
     to_email: str = TARGET_EMAIL,
 ) -> bool:
-    """Render and send the meeting brief email via Gmail API."""
+    """Render and send the meeting brief email via Resend."""
     try:
-        creds = authenticate()
-        gmail = build("gmail", "v1", credentials=creds)
-
         html_content = render_meeting_email(enriched)
 
-        message = MIMEMultipart("mixed")
-        message["to"] = to_email
-        message["subject"] = enriched.input.subject
+        params: dict = {
+            "from": RESEND_FROM,
+            "to": [to_email],
+            "subject": enriched.input.subject,
+            "html": html_content,
+        }
 
-        # HTML body
-        body_part = MIMEMultipart("alternative")
-        plain_fallback = (
-            f"Meeting Prep Brief: {enriched.input.subject}\n\n"
-            "Please view this email in an HTML-capable client for the full brief."
-        )
-        body_part.attach(MIMEText(plain_fallback, "plain"))
-        body_part.attach(MIMEText(html_content, "html"))
-        message.attach(body_part)
+        # Attach calendar attachments if available
+        attachments = _fetch_attachments(enriched.input.attachments)
+        if attachments:
+            params["attachments"] = attachments
 
-        # Attachments from the calendar event
-        if enriched.input.attachments:
-            drive = build("drive", "v3", credentials=creds)
-            for att_meta in enriched.input.attachments:
-                file_id = att_meta.get("file_id", "")
-                if not file_id:
-                    continue
-                result = _fetch_attachment(drive, file_id)
-                if result is None:
-                    continue
-                filename, content_bytes, mime_type = result
-                part = MIMEApplication(content_bytes)
-                part.add_header(
-                    "Content-Disposition", "attachment", filename=filename
-                )
-                part["Content-Type"] = mime_type
-                message.attach(part)
-
-        raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode("utf-8")
-        gmail.users().messages().send(
-            userId="me", body={"raw": raw_message}
-        ).execute()
-
+        resend.Emails.send(params)
         logger.info("Email sent: '%s' -> %s", enriched.input.subject, to_email)
         return True
 

@@ -113,7 +113,7 @@ if run_btn:
             html = render_meeting_email(enriched)
             st.components.v1.html(html, height=800, scrolling=True)
 
-    # ── Stage 2: Send emails ─────────────────────────────────────────────
+    # ── Stage 2: Send emails via Resend ─────────────────────────────────
     st.divider()
     st.subheader("Send Emails")
 
