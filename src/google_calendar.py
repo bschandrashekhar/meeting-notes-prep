@@ -91,13 +91,22 @@ def get_meetings_for_date(target_date: date) -> list[MeetingInput]:
             timeMax=day_end,
             singleEvents=True,
             orderBy="startTime",
-            supportsAttachments=True,
         )
         .execute()
     )
 
     meetings: list[MeetingInput] = []
-    for event in events_result.get("items", []):
+    for event_summary in events_result.get("items", []):
+        # Re-fetch each event with supportsAttachments to get attachment metadata
+        event = (
+            service.events()
+            .get(
+                calendarId=calendar_id,
+                eventId=event_summary["id"],
+                supportsAttachments=True,
+            )
+            .execute()
+        )
         # Skip all-day events
         if "dateTime" not in event.get("start", {}):
             continue
