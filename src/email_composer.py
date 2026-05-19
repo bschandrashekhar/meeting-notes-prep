@@ -49,11 +49,19 @@ def _fetch_attachments(att_list: list[dict]) -> list[dict]:
     """
     from src.config import GOOGLE_SERVICE_ACCOUNT_KEY
 
-    if not att_list or not GOOGLE_SERVICE_ACCOUNT_KEY:
+    if not att_list:
+        logger.info("No attachments to fetch")
         return []
+    if not GOOGLE_SERVICE_ACCOUNT_KEY:
+        logger.warning("No GOOGLE_SERVICE_ACCOUNT_KEY — cannot fetch attachments")
+        return []
+
+    logger.info("Fetching %d attachment(s) from Google Drive", len(att_list))
 
     try:
         from googleapiclient.discovery import build
+        from googleapiclient.http import MediaIoBaseDownload
+        import io
 
         creds = authenticate()
         drive = build("drive", "v3", credentials=creds)
@@ -65,14 +73,26 @@ def _fetch_attachments(att_list: list[dict]) -> list[dict]:
     for att_meta in att_list:
         file_id = att_meta.get("file_id", "")
         if not file_id:
+            logger.warning("Attachment has no file_id: %s", att_meta)
             continue
         try:
+            logger.info("Downloading attachment: %s (file_id=%s)", att_meta.get("filename"), file_id)
             meta = drive.files().get(fileId=file_id, fields="name,mimeType").execute()
-            content = drive.files().get_media(fileId=file_id).execute()
+
+            # Download file content into a buffer
+            request = drive.files().get_media(fileId=file_id)
+            buffer = io.BytesIO()
+            downloader = MediaIoBaseDownload(buffer, request)
+            done = False
+            while not done:
+                _, done = downloader.next_chunk()
+
+            content_bytes = buffer.getvalue()
             attachments.append({
                 "filename": meta["name"],
-                "content": list(content),  # Resend expects bytes-like content
+                "content": list(content_bytes),
             })
+            logger.info("Fetched attachment: %s (%d bytes)", meta["name"], len(content_bytes))
         except Exception as e:
             logger.warning("Failed to fetch attachment %s: %s", file_id, e)
 

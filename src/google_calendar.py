@@ -91,6 +91,7 @@ def get_meetings_for_date(target_date: date) -> list[MeetingInput]:
             timeMax=day_end,
             singleEvents=True,
             orderBy="startTime",
+            supportsAttachments=True,
         )
         .execute()
     )
