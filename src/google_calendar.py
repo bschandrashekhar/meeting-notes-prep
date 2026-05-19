@@ -96,17 +96,7 @@ def get_meetings_for_date(target_date: date) -> list[MeetingInput]:
     )
 
     meetings: list[MeetingInput] = []
-    for event_summary in events_result.get("items", []):
-        # Re-fetch each event with supportsAttachments to get attachment metadata
-        event = (
-            service.events()
-            .get(
-                calendarId=calendar_id,
-                eventId=event_summary["id"],
-                supportsAttachments=True,
-            )
-            .execute()
-        )
+    for event in events_result.get("items", []):
         # Skip all-day events
         if "dateTime" not in event.get("start", {}):
             continue
@@ -119,6 +109,11 @@ def get_meetings_for_date(target_date: date) -> list[MeetingInput]:
         parsed = _parse_description(description)
 
         # Attachments from Google Calendar (stored as Drive files)
+        raw_attachments = event.get("attachments", [])
+        logger.info(
+            "Event '%s' has %d attachment(s): %s",
+            event.get("summary", "?"), len(raw_attachments), raw_attachments,
+        )
         attachments = [
             {
                 "filename": att.get("title", "attachment"),
