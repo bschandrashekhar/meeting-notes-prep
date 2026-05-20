@@ -18,14 +18,7 @@ st.set_page_config(
     layout="wide",
 )
 
-# Logo + Title
-col_logo, col_title = st.columns([1, 8])
-with col_logo:
-    logo_path = Path(__file__).parent / "assets" / "logo.svg"
-    if logo_path.exists():
-        st.image(str(logo_path), width=120)
-with col_title:
-    st.title("Meeting Preparation Pipeline")
+st.title("Meeting Preparation Pipeline")
 
 # ---------------------------------------------------------------------------
 # Session state init
@@ -41,7 +34,9 @@ if "pipeline_done" not in st.session_state:
 # Sidebar
 # ---------------------------------------------------------------------------
 with st.sidebar:
-    st.header("Settings")
+    logo_path = Path(__file__).parent / "assets" / "logo.svg"
+    if logo_path.exists():
+        st.image(str(logo_path), width=200)
     tomorrow = datetime.now(IST).date() + timedelta(days=1)
     tdate = st.date_input("Select Date to read Meetings", value=tomorrow)
     run_btn = st.button("🚀 Run Pipeline", type="primary", use_container_width=True)
