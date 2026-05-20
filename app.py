@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import streamlit as st
 from datetime import datetime, timedelta
+from pathlib import Path
 
 # Load config FIRST (ensures .env is loaded before client_referencing)
 from src.config import IST, TARGET_EMAIL
@@ -17,7 +18,14 @@ st.set_page_config(
     layout="wide",
 )
 
-st.title("Meeting Preparation Pipeline")
+# Logo + Title
+col_logo, col_title = st.columns([1, 8])
+with col_logo:
+    logo_path = Path(__file__).parent / "assets" / "logo.svg"
+    if logo_path.exists():
+        st.image(str(logo_path), width=120)
+with col_title:
+    st.title("Meeting Preparation Pipeline")
 
 # ---------------------------------------------------------------------------
 # Session state init
