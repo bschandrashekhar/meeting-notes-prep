@@ -84,11 +84,12 @@ pip install "git+https://github.com/bschandrashekhar/smo-cold-message.git"
     meeting_4_tomorrow.PROSPECT_TECHNOLOGIES = Make a Single Claude API call for extracting from COMPANY_TECH_INFO;
 
     //This function is a reusable routine available in the SMO Python Package that we have built already.
+    MAX_MATCHES = 5;
     case_study_matching_result = find_casestudy_matches(
         prospect_context = meeting_4_tomorrow.PROSPECT_CONTEXT,
         prospect_industry = meeting_4_tomorrow.PROSPECT_INDUSTRY,
         prospect_technologies = meeting_4_tomorrow.PROSPECT_TECHNOLOGIES,
-        max_matches = 5
+        max_matches = MAX_MATCHES
     );
     meeting_4_tomorrow.case_study_matching_result = case_study_matching_result;
 
@@ -105,12 +106,13 @@ pip install "git+https://github.com/bschandrashekhar/smo-cold-message.git"
 
     Update the "meeting_4_tomorrow.PROSPECT_COUNTRY" field accordingly;
 
+    MAX_MATCHES = 6;
     //This function is a reusable routine available in the SMO Python Package that we have built already.
     existing_client_matching_result = find_matches(
         prospect_industry: meeting_4_tomorrow.PROSPECT_INDUSTRY,
         prospect_technologies: meeting_4_tomorrow.PROSPECT_TECHNOLOGIES, 
         prospect_country: meeting_4_tomorrow.PROSPECT_COUNTRY,
-        max_matches: 6
+        max_matches: MAX_MATCHES
     );
     meeting_4_tomorrow.existing_client_matching_result = existing_client_matching_result;
 
