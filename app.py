@@ -109,16 +109,21 @@ if st.session_state.pipeline_done:
 
         # ── After enrichment ─────────────────────────────────────────────
         with st.expander(f"✅ {meeting_label} — After Enrichment", expanded=False):
-            col1, col2, col3 = st.columns(3)
+            st.markdown("**Prospect Context:**")
+            st.text(enriched.prospect_context)
+
+            col1, col2, col3, col4 = st.columns(4)
             with col1:
+                st.markdown(f"**Industry:** {enriched.input.prospect_industry}")
+            with col2:
                 st.markdown("**Extracted Technologies:**")
                 if enriched.prospect_technologies:
                     st.write(", ".join(enriched.prospect_technologies))
                 else:
                     st.write("None extracted")
-            with col2:
-                st.markdown(f"**Normalized Country:** {enriched.normalized_country}")
             with col3:
+                st.markdown(f"**Normalized Country:** {enriched.normalized_country}")
+            with col4:
                 st.markdown(f"**Brand:** {enriched.brand_result.get('brand', 'N/A')}")
 
             col_left, col_right = st.columns(2)
