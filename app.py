@@ -42,7 +42,7 @@ with st.sidebar:
 # Run pipeline (only when button is clicked)
 # ---------------------------------------------------------------------------
 if run_btn:
-    # Clear previous results
+    # Clear previous results so old content disappears immediately
     st.session_state.enriched_list = []
     st.session_state.meetings_raw = []
     st.session_state.pipeline_done = False
@@ -109,55 +109,23 @@ if st.session_state.pipeline_done:
 
         # ── After enrichment ─────────────────────────────────────────────
         with st.expander(f"✅ {meeting_label} — After Enrichment", expanded=False):
-            col1, col2 = st.columns(2)
-            with col1:
-                st.markdown("**Subject:** " + enriched.input.subject)
-                st.markdown("**Agenda:**")
-                st.text(enriched.input.agenda)
-                st.markdown("**Company Information:**")
-                st.text(enriched.input.company_information)
-            with col2:
-                if enriched.input.company_tech_info:
-                    st.markdown("**Company Tech Background:**")
-                    st.text(enriched.input.company_tech_info)
-                st.markdown(f"**Industry:** {enriched.input.prospect_industry}")
-                st.markdown(f"**Country:** {enriched.input.company_country}")
-                if enriched.input.attendees:
-                    st.markdown("**Attendees:**")
-                    for att in enriched.input.attendees:
-                        parts = [f"**{att.name}**"]
-                        if att.title:
-                            parts.append(f" — {att.title}")
-                        if att.linkedin_url:
-                            parts.append(f" ([LinkedIn]({att.linkedin_url}))")
-                        st.markdown("".join(parts))
+            st.markdown("**Extracted Technologies:**")
+            if enriched.prospect_technologies:
+                st.write(", ".join(enriched.prospect_technologies))
+            else:
+                st.write("None extracted")
 
-            st.divider()
+            st.markdown(f"**Normalized Country:** {enriched.normalized_country}")
 
-            col3, col4 = st.columns(2)
-            with col3:
-                st.markdown("**Extracted Technologies:**")
-                if enriched.prospect_technologies:
-                    st.write(", ".join(enriched.prospect_technologies))
-                else:
-                    st.write("None extracted")
+            st.markdown(f"**Case Study Matches:** {len(enriched.case_study_matches)}")
+            for cs in enriched.case_study_matches:
+                st.markdown(f"- {cs.get('casestudy_name', 'N/A')}")
 
-                st.markdown(f"**Normalized Country:** {enriched.normalized_country}")
-                st.markdown(f"**Brand:** {enriched.brand_result.get('brand', 'N/A')}")
+            st.markdown(f"**Client Matches:** {len(enriched.client_matches)}")
+            for cl in enriched.client_matches:
+                st.markdown(f"- {cl.get('client_name', 'N/A')}")
 
-            with col4:
-                st.markdown(f"**Case Study Matches:** {len(enriched.case_study_matches)}")
-                for cs in enriched.case_study_matches:
-                    st.markdown(f"- {cs.get('casestudy_name', 'N/A')}")
-
-                st.markdown(f"**Client Matches:** {len(enriched.client_matches)}")
-                for cl in enriched.client_matches:
-                    st.markdown(f"- {cl.get('client_name', 'N/A')}")
-
-            if enriched.case_study_narrative:
-                st.markdown("**Conversational Flow:**")
-                for bullet in enriched.case_study_narrative:
-                    st.markdown(f"- {bullet}")
+            st.markdown(f"**Brand:** {enriched.brand_result.get('brand', 'N/A')}")
 
         # ── Final email preview ──────────────────────────────────────────
         with st.expander(f"📧 {meeting_label} — Final eMail", expanded=False):

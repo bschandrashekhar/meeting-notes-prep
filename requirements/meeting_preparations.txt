@@ -68,7 +68,12 @@ pip install "git+https://github.com/bschandrashekhar/smo-cold-message.git"
 
     If (running on web) { 
       assert meeting_4_tomorrow as "Meeting after enrichment: "
-      assert individual fields of "meeting_4_tomorrow" with respective labels correctly identifying it. 
+      assert only these following fields of "meeting_4_tomorrow" with respective labels correctly identifying it:
+        - PROSPECT_TECHNOLOGIES,
+        - PROSPECT_COUNTRY,
+        - case_study_matching_result,
+        - existing_client_matching_result,
+        - brand_result.
     };
   };
 
