@@ -109,23 +109,27 @@ if st.session_state.pipeline_done:
 
         # ── After enrichment ─────────────────────────────────────────────
         with st.expander(f"✅ {meeting_label} — After Enrichment", expanded=False):
-            st.markdown("**Extracted Technologies:**")
-            if enriched.prospect_technologies:
-                st.write(", ".join(enriched.prospect_technologies))
-            else:
-                st.write("None extracted")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.markdown("**Extracted Technologies:**")
+                if enriched.prospect_technologies:
+                    st.write(", ".join(enriched.prospect_technologies))
+                else:
+                    st.write("None extracted")
+            with col2:
+                st.markdown(f"**Normalized Country:** {enriched.normalized_country}")
+            with col3:
+                st.markdown(f"**Brand:** {enriched.brand_result.get('brand', 'N/A')}")
 
-            st.markdown(f"**Normalized Country:** {enriched.normalized_country}")
-
-            st.markdown(f"**Case Study Matches:** {len(enriched.case_study_matches)}")
-            for cs in enriched.case_study_matches:
-                st.markdown(f"- {cs.get('casestudy_name', 'N/A')}")
-
-            st.markdown(f"**Client Matches:** {len(enriched.client_matches)}")
-            for cl in enriched.client_matches:
-                st.markdown(f"- {cl.get('client_name', 'N/A')}")
-
-            st.markdown(f"**Brand:** {enriched.brand_result.get('brand', 'N/A')}")
+            col_left, col_right = st.columns(2)
+            with col_left:
+                st.markdown(f"**Case Study Matches ({len(enriched.case_study_matches)}):**")
+                for cs in enriched.case_study_matches:
+                    st.markdown(f"- {cs.get('casestudy_name', 'N/A')}")
+            with col_right:
+                st.markdown(f"**Client Matches ({len(enriched.client_matches)}):**")
+                for cl in enriched.client_matches:
+                    st.markdown(f"- {cl.get('client_name', 'N/A')}")
 
         # ── Final email preview ──────────────────────────────────────────
         with st.expander(f"📧 {meeting_label} — Final eMail", expanded=False):

@@ -110,7 +110,7 @@ pip install "git+https://github.com/bschandrashekhar/smo-cold-message.git"
         prospect_industry: meeting_4_tomorrow.PROSPECT_INDUSTRY,
         prospect_technologies: meeting_4_tomorrow.PROSPECT_TECHNOLOGIES, 
         prospect_country: meeting_4_tomorrow.PROSPECT_COUNTRY,
-        max_matches: 5
+        max_matches: 6
     );
     meeting_4_tomorrow.existing_client_matching_result = existing_client_matching_result;
 
