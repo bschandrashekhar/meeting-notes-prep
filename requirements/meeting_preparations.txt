@@ -145,6 +145,7 @@ For each "meeting_4_tomorrow" in the list "meetings_4_tomorrow".  Prepare an ema
           - LinkedIn URL: (optional)
 
       - Casestudies to Reference:      
+        - Start the bullet by mentioning the Matched Case Studies Name with Exact tech matches in brackets next to it.
         - Utilize each casestudy i.e. meeting_4_tomorrow.case_study_matching_result.summary_solution & meeting_4_tomorrow.prospect_context to weave a conversational flow for all the individual casestudies using Claude;
         - The resultant flow should be presented in bullets to follow easily.
 
