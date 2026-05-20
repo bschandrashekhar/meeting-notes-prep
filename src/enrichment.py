@@ -182,20 +182,20 @@ def enrich_meeting(meeting: MeetingInput) -> EnrichedMeeting:
         prospect_context=prospect_context,
         prospect_industry=meeting.prospect_industry,
         prospect_technologies=techs_csv,
-        max_matches=5,
+        max_matches=10,
     )
     cs_matches = [m.to_dict() for m in cs_result.get("matches", [])]
 
-    # Step 2: Client matching (min 6 required by API, take top 5)
+    # Step 2: Client matching
     logger.info("Finding client matches …")
     client_result = find_matches(
         prospect_industry=meeting.prospect_industry,
         prospect_technologies=techs_csv,
         prospect_country=normalized_country,
-        max_matches=6,
+        max_matches=10,
     )
     client_matches_raw = client_result.get("matches", [])
-    client_matches = [m.to_dict() for m in client_matches_raw[:5]]
+    client_matches = [m.to_dict() for m in client_matches_raw]
 
     # Fetch logo URLs
     client_names = [m["client_name"] for m in client_matches]
