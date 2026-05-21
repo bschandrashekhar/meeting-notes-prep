@@ -12,11 +12,12 @@ from supabase import create_client
 from src.config import (
     ANTHROPIC_API_KEY,
     ANTHROPIC_MODEL,
+    SIGNALS_TO_LOOK_FOR,
     SUPABASE_URL,
     SUPABASE_SERVICE_KEY,
     normalize_country,
 )
-from src.models import EnrichedMeeting, MeetingInput
+from src.models import AttendeeInsight, EnrichedMeeting, MeetingInput
 
 logger = logging.getLogger(__name__)
 
@@ -148,6 +149,104 @@ def _generate_case_study_narrative(
 
 
 # ---------------------------------------------------------------------------
+# Step 4 — Attendee LinkedIn enrichment
+# ---------------------------------------------------------------------------
+
+def _fetch_all_client_names() -> list[str]:
+    """Get all client names from client_referencing_data for signal detection."""
+    from client_referencing.matcher import fetch_all_rows
+    rows = fetch_all_rows()
+    return list({row["client_name"] for row in rows if row.get("client_name")})
+
+
+_LINKEDIN_SYSTEM_PROMPT = (
+    "You are a sales meeting preparation assistant. "
+    "You will be given a LinkedIn URL to search, a list of signal terms to look for, "
+    "and a list of client company names to check against. "
+    "Do a single first-level web search for the LinkedIn URL. Do NOT do follow-up searches. "
+    "Based on whatever you find, return a JSON object with these keys:\n"
+    '- "profile_summary": brief summary of what you found (title, company, notable points)\n'
+    '- "signal_matches": array of signal terms (from the provided list) found in the search results\n'
+    '- "client_matches": array of client names (from the provided list) found in the search results (loose matching — abbreviations or slight variations count)\n'
+    '- "suggested_questions": array of exactly 3 compelling questions to ask this person in a meeting\n'
+    "Return ONLY the JSON object, no other text."
+)
+
+
+def _enrich_attendee_via_linkedin(
+    attendee: "Attendee",
+    prospect_context: str,
+    signals: set[str],
+    client_names: list[str],
+) -> AttendeeInsight:
+    """Use Claude web search to research an attendee's LinkedIn profile."""
+    from src.models import Attendee
+
+    if not attendee.linkedin_url.strip():
+        return AttendeeInsight(attendee_name=attendee.name)
+
+    user_msg = (
+        f"LinkedIn URL: {attendee.linkedin_url}\n"
+        f"Person: {attendee.name}"
+        + (f" — {attendee.title}" if attendee.title else "")
+        + f"\n\nSIGNALS TO LOOK FOR (check if any of these terms appear in the search results):\n"
+        f"{json.dumps(sorted(signals))}\n\n"
+        f"CLIENT NAMES TO CHECK (check if any of these company names appear):\n"
+        f"{json.dumps(client_names)}\n\n"
+        f"PROSPECT CONTEXT (use this to craft the 3 suggested questions):\n"
+        f"{prospect_context}"
+    )
+
+    try:
+        client = _get_anthropic()
+        response = client.messages.create(
+            model=ANTHROPIC_MODEL,
+            max_tokens=2048,
+            system=_LINKEDIN_SYSTEM_PROMPT,
+            tools=[{"type": "web_search_20250305", "name": "web_search"}],
+            messages=[{"role": "user", "content": user_msg}],
+        )
+
+        # Extract text blocks from response (may have tool_use blocks interspersed)
+        text_parts = []
+        for block in response.content:
+            if block.type == "text":
+                text_parts.append(block.text)
+        full_text = "\n".join(text_parts).strip()
+
+        # Parse JSON — handle markdown code blocks
+        if "```json" in full_text:
+            full_text = full_text.split("```json")[1].split("```")[0].strip()
+        elif "```" in full_text:
+            full_text = full_text.split("```")[1].split("```")[0].strip()
+
+        data = json.loads(full_text)
+        return AttendeeInsight(
+            attendee_name=attendee.name,
+            linkedin_url=attendee.linkedin_url,
+            profile_summary=data.get("profile_summary", ""),
+            signal_matches=data.get("signal_matches", []),
+            client_matches=data.get("client_matches", []),
+            suggested_questions=data.get("suggested_questions", [])[:3],
+        )
+
+    except json.JSONDecodeError:
+        logger.warning("Failed to parse LinkedIn enrichment JSON for %s", attendee.name)
+        return AttendeeInsight(
+            attendee_name=attendee.name,
+            linkedin_url=attendee.linkedin_url,
+            enrichment_error="Failed to parse response",
+        )
+    except Exception as exc:
+        logger.warning("LinkedIn enrichment failed for %s: %s", attendee.name, exc)
+        return AttendeeInsight(
+            attendee_name=attendee.name,
+            linkedin_url=attendee.linkedin_url,
+            enrichment_error=str(exc),
+        )
+
+
+# ---------------------------------------------------------------------------
 # Main enrichment orchestrator
 # ---------------------------------------------------------------------------
 
@@ -211,6 +310,20 @@ def enrich_meeting(meeting: MeetingInput) -> EnrichedMeeting:
     logger.info("Generating case study narrative …")
     narrative = _generate_case_study_narrative(cs_matches, prospect_context)
 
+    # Step 4: Attendee LinkedIn enrichment
+    logger.info("Enriching attendees via LinkedIn …")
+    all_client_names = _fetch_all_client_names()
+    attendee_insights = []
+    for att in meeting.attendees:
+        if att.linkedin_url.strip():
+            logger.info("Researching LinkedIn for %s …", att.name)
+            insight = _enrich_attendee_via_linkedin(
+                att, prospect_context, SIGNALS_TO_LOOK_FOR, all_client_names
+            )
+        else:
+            insight = AttendeeInsight(attendee_name=att.name)
+        attendee_insights.append(insight)
+
     return EnrichedMeeting(
         input=meeting,
         prospect_context=prospect_context,
@@ -220,4 +333,5 @@ def enrich_meeting(meeting: MeetingInput) -> EnrichedMeeting:
         client_matches=client_matches,
         brand_result=brand_result,
         case_study_narrative=narrative,
+        attendee_insights=attendee_insights,
     )

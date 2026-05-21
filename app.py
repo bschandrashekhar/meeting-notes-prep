@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 # Load config FIRST (ensures .env is loaded before client_referencing)
-from src.config import IST, TARGET_EMAIL
+from src.config import IST, SIGNALS_TO_LOOK_FOR, TARGET_EMAIL
 from src.google_calendar import get_meetings_for_date
 from src.enrichment import enrich_meeting
 from src.email_composer import render_meeting_email, send_meeting_email
@@ -100,6 +100,7 @@ if st.session_state.pipeline_done:
                     st.text(meeting.company_tech_info)
                 st.markdown(f"**Industry:** {meeting.prospect_industry}")
                 st.markdown(f"**Country:** {meeting.company_country}")
+                st.markdown(f"**SIGNALS_TO_LOOK_FOR:** {', '.join(sorted(SIGNALS_TO_LOOK_FOR))}")
                 if meeting.attendees:
                     st.markdown("**Attendees:**")
                     for att in meeting.attendees:
@@ -138,6 +139,27 @@ if st.session_state.pipeline_done:
                 st.markdown(f"**Client Matches ({len(enriched.client_matches)}):**")
                 for cl in enriched.client_matches:
                     st.markdown(f"- {cl.get('client_name', 'N/A')}")
+
+            # Attendee Insights
+            if enriched.attendee_insights:
+                st.markdown("---")
+                st.markdown("**Attendee Insights:**")
+                for insight in enriched.attendee_insights:
+                    if not insight.linkedin_url and not insight.enrichment_error:
+                        continue  # skip attendees with no LinkedIn
+                    st.markdown(f"**{insight.attendee_name}**")
+                    if insight.profile_summary:
+                        st.markdown(insight.profile_summary)
+                    if insight.signal_matches:
+                        st.success(f"Signals detected: {', '.join(insight.signal_matches)}")
+                    if insight.client_matches:
+                        st.success(f"Client matches: {', '.join(insight.client_matches)}")
+                    if insight.suggested_questions:
+                        st.markdown("**Suggested Questions:**")
+                        for i, q in enumerate(insight.suggested_questions, 1):
+                            st.markdown(f"{i}. {q}")
+                    if insight.enrichment_error:
+                        st.warning(f"Could not enrich: {insight.enrichment_error}")
 
         # ── Final email preview ──────────────────────────────────────────
         with st.expander(f"📧 {meeting_label} — Final eMail", expanded=False):

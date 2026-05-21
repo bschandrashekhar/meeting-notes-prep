@@ -107,6 +107,11 @@ _COUNTRY_MAP: dict[str, str] = {
 
 ALLOWED_COUNTRIES = {"EMEA", "USA", "Australia", "Canada", "UK"}
 
+# ---------------------------------------------------------------------------
+# LinkedIn signal detection
+# ---------------------------------------------------------------------------
+SIGNALS_TO_LOOK_FOR: set[str] = {"Greater Melbourne Area", "NDIA", "Lumary", "Min-IT", "MinIT"}
+
 
 def normalize_country(raw: str) -> str:
     """Map a free-text country name to one of the five allowed regions."""

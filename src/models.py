@@ -30,6 +30,17 @@ class MeetingInput(BaseModel):
     calendar_event_id: str = ""
 
 
+class AttendeeInsight(BaseModel):
+    """LinkedIn-enriched data for a single attendee."""
+    attendee_name: str
+    linkedin_url: str = ""
+    profile_summary: str = ""
+    signal_matches: list[str] = Field(default_factory=list)
+    client_matches: list[str] = Field(default_factory=list)
+    suggested_questions: list[str] = Field(default_factory=list)
+    enrichment_error: str = ""
+
+
 class EnrichedMeeting(BaseModel):
     """Meeting after enrichment (Stage 1 complete)."""
     input: MeetingInput
@@ -46,3 +57,6 @@ class EnrichedMeeting(BaseModel):
 
     # Claude-generated conversational bullets for each case study
     case_study_narrative: list[str] = Field(default_factory=list)
+
+    # LinkedIn attendee enrichment
+    attendee_insights: list[AttendeeInsight] = Field(default_factory=list)
