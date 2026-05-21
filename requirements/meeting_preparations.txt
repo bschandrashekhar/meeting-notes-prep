@@ -144,7 +144,7 @@ For each "meeting_4_tomorrow" in the list "meetings_4_tomorrow". Prepare an emai
           - Title: (must) 
           - LinkedIn: (optional)
             if ("LinkedIn" is valid URL) {
-              QnA : List 3 compelling questions that can be asked to the attendee bsaed on their profile with the context from meeting_4_tomorrow.PROSPECT_CONTEXT. Keep the question crisp and to the point;
+              QnA : List 3 compelling questions that can be asked to the attendee based on their LinkedIn Profile, Title along with the context from meeting_4_tomorrow.PROSPECT_CONTEXT. Keep the question crisp and to the point;
             }
 
       - Casestudies to Reference:      
@@ -158,5 +158,5 @@ For each "meeting_4_tomorrow" in the list "meetings_4_tomorrow". Prepare an emai
 
     - If (running on web) { assert EMAIL_4_MEETING as "Final eMail: "};
 
-    - Send the email EMAIL_4_MEETING to "sateesh@mindruby.com";
+    - Send the email EMAIL_4_MEETING to TARGET_EMAIL;
   }

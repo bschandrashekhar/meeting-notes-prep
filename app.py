@@ -166,7 +166,7 @@ if st.session_state.pipeline_done:
     send_emails = st.checkbox("Send emails after preview", value=False)
 
     if send_emails:
-        to_email = st.text_input("Send briefs to", value="bschandrashekhar@yahoo.com")
+        to_email = st.text_input("Send briefs to", value=TARGET_EMAIL)
         if st.button("📤 Send All Emails", type="secondary"):
             sent = 0
             for enriched in enriched_list:

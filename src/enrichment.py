@@ -157,8 +157,8 @@ _LINKEDIN_SYSTEM_PROMPT = (
     "Search the given LinkedIn URL. Do a single first-level web search only — no follow-up searches.\n\n"
     "Based on what you find:\n"
     "1. Write a brief profile summary (current title, company, notable points).\n"
-    "2. Generate exactly 3 compelling meeting questions based on the profile + prospect context. "
-    "Keep each question crisp and to the point.\n\n"
+    "2. Generate exactly 3 compelling meeting questions based on their LinkedIn profile, "
+    "their title/role, and the prospect context. Keep each question crisp and to the point.\n\n"
     "Return ONLY a JSON object:\n"
     '{"profile_summary": "...", "suggested_questions": [...]}'
 )
