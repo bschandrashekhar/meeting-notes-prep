@@ -19,6 +19,7 @@ from src.config import (
 )
 from src.models import AttendeeInsight, EnrichedMeeting, MeetingInput
 
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Lazy-init Anthropic client
