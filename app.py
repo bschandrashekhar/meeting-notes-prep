@@ -100,7 +100,6 @@ if st.session_state.pipeline_done:
                     st.text(meeting.company_tech_info)
                 st.markdown(f"**Industry:** {meeting.prospect_industry}")
                 st.markdown(f"**Country:** {meeting.company_country}")
-                st.markdown(f"**SIGNALS_TO_LOOK_FOR:** {', '.join(sorted(SIGNALS_TO_LOOK_FOR))}")
                 if meeting.attendees:
                     st.markdown("**Attendees:**")
                     for att in meeting.attendees:
@@ -163,6 +162,7 @@ if st.session_state.pipeline_done:
 
         # ── Final email preview ──────────────────────────────────────────
         with st.expander(f"📧 {meeting_label} — Final eMail", expanded=False):
+            st.markdown(f"**SIGNALS_TO_LOOK_FOR:** {', '.join(sorted(SIGNALS_TO_LOOK_FOR))}")
             html = render_meeting_email(enriched)
             st.components.v1.html(html, height=800, scrolling=True)
 

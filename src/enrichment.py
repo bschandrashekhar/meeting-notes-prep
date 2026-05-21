@@ -160,16 +160,19 @@ def _fetch_all_client_names() -> list[str]:
 
 
 _LINKEDIN_SYSTEM_PROMPT = (
-    "You are a sales meeting preparation assistant. "
-    "You will be given a LinkedIn URL to search, a list of signal terms to look for, "
-    "and a list of client company names to check against. "
-    "Do a single first-level web search for the LinkedIn URL. Do NOT do follow-up searches. "
-    "Based on whatever you find, return a JSON object with these keys:\n"
-    '- "profile_summary": brief summary of what you found (title, company, notable points)\n'
-    '- "signal_matches": array of signal terms (from the provided list) found in the search results\n'
-    '- "client_matches": array of client names (from the provided list) found in the search results (loose matching — abbreviations or slight variations count)\n'
-    '- "suggested_questions": array of exactly 3 compelling questions to ask this person in a meeting\n'
-    "Return ONLY the JSON object, no other text."
+    "You are a sales meeting preparation assistant.\n"
+    "Search the given LinkedIn URL. Do a single first-level web search only — no follow-up searches.\n\n"
+    "Then treat EVERYTHING you found as plain text and do these steps:\n"
+    "1. Write a brief profile summary (current title, company, notable points).\n"
+    "2. SIGNAL SCAN: For each term in the SIGNALS list, do a case-insensitive text search "
+    "across ALL the content you found. If the term appears anywhere, include it in signal_matches.\n"
+    "3. CLIENT SCAN: For each name in the CLIENT NAMES list, do a case-insensitive text search "
+    "across ALL the content you found. If the name appears anywhere (exact or close variation), "
+    "include it in client_matches.\n"
+    "4. Generate exactly 3 compelling meeting questions based on the profile + prospect context. "
+    "Keep each question crisp and to the point.\n\n"
+    "Return ONLY a JSON object:\n"
+    '{"profile_summary": "...", "signal_matches": [...], "client_matches": [...], "suggested_questions": [...]}'
 )
 
 
@@ -180,8 +183,6 @@ def _enrich_attendee_via_linkedin(
     client_names: list[str],
 ) -> AttendeeInsight:
     """Use Claude web search to research an attendee's LinkedIn profile."""
-    from src.models import Attendee
-
     if not attendee.linkedin_url.strip():
         return AttendeeInsight(attendee_name=attendee.name)
 
@@ -213,6 +214,8 @@ def _enrich_attendee_via_linkedin(
             if block.type == "text":
                 text_parts.append(block.text)
         full_text = "\n".join(text_parts).strip()
+
+        logger.info("LinkedIn raw response for %s: %s", attendee.name, full_text[:500])
 
         # Parse JSON — handle markdown code blocks
         if "```json" in full_text:

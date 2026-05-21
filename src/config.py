@@ -33,8 +33,6 @@ ANTHROPIC_API_KEY = _get_secret("ANTHROPIC_API_KEY")
 VOYAGE_API_KEY = _get_secret("VOYAGE_API_KEY")
 SUPABASE_URL = _get_secret("SUPABASE_URL")
 SUPABASE_SERVICE_KEY = _get_secret("SUPABASE_SERVICE_KEY")
-SERPER_API_KEY = _get_secret("SERPER_API_KEY")
-APOLLO_API_KEY = _get_secret("APOLLO_API_KEY")
 
 # ---------------------------------------------------------------------------
 # Meeting Prep
@@ -110,7 +108,10 @@ ALLOWED_COUNTRIES = {"EMEA", "USA", "Australia", "Canada", "UK"}
 # ---------------------------------------------------------------------------
 # LinkedIn signal detection
 # ---------------------------------------------------------------------------
-SIGNALS_TO_LOOK_FOR: set[str] = {"Greater Melbourne Area", "NDIA", "Lumary", "Min-IT", "MinIT"}
+SIGNALS_TO_LOOK_FOR: set[str] = {
+    "Vergent", "Plaid", "Monoova", "Loan Payments Pro", "NDIS", "Lumary",
+    "Min-IT", "MinIT", "Raisely", "Funraisin", "Salesforce", "Data Cloud", "Snowflake",
+}
 
 
 def normalize_country(raw: str) -> str:
