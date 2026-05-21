@@ -35,8 +35,6 @@ class AttendeeInsight(BaseModel):
     attendee_name: str
     linkedin_url: str = ""
     profile_summary: str = ""
-    signal_matches: list[str] = Field(default_factory=list)
-    client_matches: list[str] = Field(default_factory=list)
     suggested_questions: list[str] = Field(default_factory=list)
     enrichment_error: str = ""
 

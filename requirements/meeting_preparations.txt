@@ -125,7 +125,7 @@ pip install "git+https://github.com/bschandrashekhar/smo-cold-message.git"
     );
     meeting_4_tomorrow.brand_result = brand_result; 
 
-SIGNALS_TO_LOOK_FOR : {"Vergent", "Plaid", "Monoova", "Loan Payments Pro", "NDIS", "Lumary", "Min-IT", "MinIT", "Raisely", "Funraisin", "Salesforce", "Data Cloud", "Snowflake"};
+//SIGNALS_TO_LOOK_FOR : {"Vergent", "Plaid", "Monoova", "Loan Payments Pro", "NDIS", "Lumary", "Min-IT", "MinIT", "Raisely", "Funraisin", "Salesforce", "Data Cloud", "Snowflake"};
 
 ##  "Stage 2" — Synthesize the meeting brief email (To be run after "Stage 1") ##
 For each "meeting_4_tomorrow" in the list "meetings_4_tomorrow". Prepare an email to be sent, call it "EMAIL_4_MEETING" containing:
@@ -138,17 +138,13 @@ For each "meeting_4_tomorrow" in the list "meetings_4_tomorrow". Prepare an emai
       - Company Information: meeting_4_tomorrow.COMPANY_INFORMATION;
       - Company Tech Background:meeting_4_tomorrow.COMPANY_TECH_INFO;
       - Company Industry:meeting_4_tomorrow.COMPANY_COUNTRY;
-      - If (running on web) { assert SIGNALS_TO_LOOK_FOR as "SIGNALS_TO_LOOK_FOR: "};
+  //    - If (running on web) { assert SIGNALS_TO_LOOK_FOR as "SIGNALS_TO_LOOK_FOR: "};
       - Attendees: List as many as in the original email. Each attendee section to have this information:
         1. Full Name (must)
           - Title: (must) 
           - LinkedIn: (optional)
             if ("LinkedIn" is valid URL) {
-              - Using Claude web search, scrape the "LinkedIn" profile to indicate if it has any "SIGNALS_TO_LOOK_FOR" and any matching (loosely/exact) client name from the Supabase table "client_referencing_data.client_name". Treat the scraped content by Claude Web Search as plain text. Matching has to be case-insensitive. Highlight the match on UI;
-
-              Note: SIGNALS_TO_LOOK_FOR is just a list of strings, dont deduce anything on whether it is a location or technology. I want to see if the Claude Web Search finds any mention of these terms in what it finds. I basically dont want to go too deep in search with Claude Web Search. first level search is enough for now.
-
-              - QnA : List 3 compelling questions that can be asked to the attendee bsaed on their profile with the context from meeting_4_tomorrow.PROSPECT_CONTEXT. Keep the question crisp and to the point;
+              QnA : List 3 compelling questions that can be asked to the attendee bsaed on their profile with the context from meeting_4_tomorrow.PROSPECT_CONTEXT. Keep the question crisp and to the point;
             }
 
       - Casestudies to Reference:      

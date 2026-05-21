@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 # Load config FIRST (ensures .env is loaded before client_referencing)
-from src.config import IST, SIGNALS_TO_LOOK_FOR, TARGET_EMAIL
+from src.config import IST, TARGET_EMAIL
 from src.google_calendar import get_meetings_for_date
 from src.enrichment import enrich_meeting
 from src.email_composer import render_meeting_email, send_meeting_email
@@ -149,10 +149,6 @@ if st.session_state.pipeline_done:
                     st.markdown(f"**{insight.attendee_name}**")
                     if insight.profile_summary:
                         st.markdown(insight.profile_summary)
-                    if insight.signal_matches:
-                        st.success(f"Signals detected: {', '.join(insight.signal_matches)}")
-                    if insight.client_matches:
-                        st.success(f"Client matches: {', '.join(insight.client_matches)}")
                     if insight.suggested_questions:
                         st.markdown("**Suggested Questions:**")
                         for i, q in enumerate(insight.suggested_questions, 1):
@@ -162,7 +158,6 @@ if st.session_state.pipeline_done:
 
         # ── Final email preview ──────────────────────────────────────────
         with st.expander(f"📧 {meeting_label} — Final eMail", expanded=False):
-            st.markdown(f"**SIGNALS_TO_LOOK_FOR:** {', '.join(sorted(SIGNALS_TO_LOOK_FOR))}")
             html = render_meeting_email(enriched)
             st.components.v1.html(html, height=800, scrolling=True)
 
