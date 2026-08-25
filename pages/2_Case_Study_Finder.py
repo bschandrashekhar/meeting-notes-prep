@@ -10,12 +10,7 @@ import src.config  # noqa: F401
 
 import streamlit as st
 
-from src.config import normalize_country
-from src.enrichment import (
-    extract_technologies,
-    generate_case_study_narrative,
-    _fetch_client_logos,
-)
+from src.enrichment import _fetch_client_logos
 
 # ---------------------------------------------------------------------------
 # Page config
@@ -69,13 +64,14 @@ with st.form("prospect_form"):
             "PROSPECT INDUSTRY *",
             placeholder="e.g. Healthcare, Financial Services, Retail…",
         )
-        company_country = st.text_input(
-            "COMPANY COUNTRY *",
-            placeholder="e.g. United States, United Kingdom, UAE…",
+        company_country = st.selectbox(
+            "COUNTRY *",
+            options=["USA", "EMEA", "Australia", "Canada", "UK"],
+            index=0,
         )
 
-    company_tech_info = st.text_area(
-        "COMPANY TECH INFO *",
+    prospect_technologies = st.text_area(
+        "PROSPECT TECHNOLOGIES *",
         placeholder="Tech platforms in use, IT team size, ongoing tech initiatives…",
         height=120,
     )
@@ -87,33 +83,23 @@ with st.form("prospect_form"):
 # ---------------------------------------------------------------------------
 
 if submitted:
-    # Validate mandatory fields
     errors = []
-    if not company_tech_info.strip():
-        errors.append("COMPANY TECH INFO is required.")
+    if not prospect_technologies.strip():
+        errors.append("PROSPECT TECHNOLOGIES is required.")
     if not prospect_industry.strip():
         errors.append("PROSPECT INDUSTRY is required.")
-    if not company_country.strip():
-        errors.append("COMPANY COUNTRY is required.")
 
     if errors:
         for err in errors:
             st.error(err)
     else:
         prospect_context = " ".join(
-            filter(None, [agenda.strip(), company_information.strip(), company_tech_info.strip()])
+            filter(None, [agenda.strip(), company_information.strip(), prospect_technologies.strip()])
         )
+        techs_csv = prospect_technologies.strip()
 
         try:
             with st.status("Running enrichment…", expanded=True) as status:
-
-                # Step 0: Extract technologies
-                status.write("Extracting technologies via Claude…")
-                prospect_technologies = extract_technologies(company_tech_info)
-                techs_csv = ", ".join(prospect_technologies)
-
-                # Normalize country
-                normalized_country = normalize_country(company_country)
 
                 # Step 1: Case study matching
                 status.write("Finding case study matches…")
@@ -132,7 +118,7 @@ if submitted:
                 client_result = find_matches(
                     prospect_industry=prospect_industry,
                     prospect_technologies=techs_csv,
-                    prospect_country=normalized_country,
+                    prospect_country=company_country,
                     max_matches=6,
                 )
                 client_matches = [m.to_dict() for m in client_result.get("matches", [])]
@@ -148,24 +134,16 @@ if submitted:
                 from client_referencing.brand_matcher import find_brand_match
                 brand_result = find_brand_match(prospect_industry=prospect_industry)
 
-                # Step 3b: Case study narrative
-                status.write("Generating conversational narratives via Claude…")
-                narrative = generate_case_study_narrative(cs_matches, prospect_context)
-
                 status.update(label="Enrichment complete!", state="complete")
 
-            # Persist results across reruns
             st.session_state.enrichment_result = {
                 "prospect_context": prospect_context,
                 "prospect_industry": prospect_industry.strip(),
-                "prospect_technologies": prospect_technologies,
-                "prospect_technologies_csv": techs_csv,
-                "prospect_country": normalized_country,
-                "prospect_country_raw": company_country.strip(),
+                "prospect_technologies": techs_csv,
+                "prospect_country": company_country,
                 "case_study_matches": cs_matches,
                 "client_matches": client_matches,
                 "brand_result": brand_result,
-                "case_study_narrative": narrative,
             }
             st.session_state.form_submitted = True
 
@@ -182,52 +160,22 @@ if st.session_state.form_submitted and st.session_state.enrichment_result:
 
     st.divider()
 
-    # Country normalisation warning
-    raw = r["prospect_country_raw"].lower()
-    if r["prospect_country"] == "USA" and raw not in {"usa", "us", "united states", "united states of america", "america"}:
-        st.warning(f"'{r['prospect_country_raw']}' was not recognized and defaulted to **USA**.")
-
-    # --- Enrichment summary ---
-    with st.expander("Meeting after enrichment", expanded=False):
-        col_a, col_b = st.columns(2)
-        with col_a:
-            st.markdown(f"**PROSPECT_CONTEXT**\n\n{r['prospect_context']}")
-            st.markdown(f"**PROSPECT_INDUSTRY:** {r['prospect_industry']}")
-            st.markdown(f"**PROSPECT_TECHNOLOGIES:** {r['prospect_technologies_csv'] or '*(none extracted)*'}")
-            st.markdown(f"**PROSPECT_COUNTRY:** {r['prospect_country']}")
-        with col_b:
-            cs_count = len(r["case_study_matches"])
-            cl_count = len(r["client_matches"])
-            brand = r["brand_result"].get("brand", "N/A") if isinstance(r["brand_result"], dict) else "N/A"
-            st.markdown(f"**case_study_matching_result:** {cs_count} match{'es' if cs_count != 1 else ''}")
-            st.markdown(f"**existing_client_matching_result:** {cl_count} match{'es' if cl_count != 1 else ''}")
-            st.markdown(f"**brand_result:** {brand}")
-
     # --- Stage 2: Case Studies ---
     with st.expander("Case Studies to Reference", expanded=True):
         cs_matches = r["case_study_matches"]
-        narrative = r["case_study_narrative"]
 
         if not cs_matches:
             st.info("No case studies matched for this prospect.")
         else:
-            for i, cs in enumerate(cs_matches):
+            lines = []
+            for cs in cs_matches:
                 name = cs.get("casestudy_name", "Unnamed")
                 exact_techs = cs.get("exact_techs", [])
                 tech_label = f" [{', '.join(exact_techs)}]" if exact_techs else ""
-
-                st.markdown(f"**{name}{tech_label}**")
-
-                if i < len(narrative) and narrative[i]:
-                    st.markdown(f"- {narrative[i]}")
-                else:
-                    # Fallback to summary_solution
-                    fallback = cs.get("summary_solution", "")
-                    if fallback:
-                        st.markdown(f"- {fallback}")
-
-                if i < len(cs_matches) - 1:
-                    st.markdown("---")
+                url = cs.get("url", "")
+                download = f"  [Download ↓]({url})" if url else ""
+                lines.append(f"- **{name}{tech_label}**{download}")
+            st.markdown("\n".join(lines))
 
     # --- Stage 2: Existing Clients ---
     with st.expander("Existing Clients to Reference", expanded=True):
@@ -247,12 +195,12 @@ if st.session_state.form_submitted and st.session_state.enrichment_result:
                         client_url = client.get("client_url", "")
 
                         if logo_url:
-                            st.image(logo_url, width=120)
+                            st.image(logo_url, width=64)
                         else:
                             st.markdown(
-                                f"<div style='width:120px;height:64px;background:#e8e8e8;"
-                                f"border-radius:6px;display:flex;align-items:center;"
-                                f"justify-content:center;color:#999;font-size:12px;'>No logo</div>",
+                                "<div style='width:64px;height:40px;background:#e8e8e8;"
+                                "border-radius:4px;display:flex;align-items:center;"
+                                "justify-content:center;color:#999;font-size:10px;'>No logo</div>",
                                 unsafe_allow_html=True,
                             )
 
