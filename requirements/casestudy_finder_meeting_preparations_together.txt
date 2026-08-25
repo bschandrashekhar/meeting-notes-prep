@@ -1,0 +1,117 @@
+# Meeting Preperation Pipeline Orchestration #
+Important: This project depends on the client_referencing package from the smo-cold-message GitHub repo. Install it with:
+pip install "git+https://github.com/bschandrashekhar/smo-cold-message.git"
+
+## Definitions ##
+
+  //Following is template structure of "case_study_matching_result"
+  case_study_matching_result
+    [
+      {
+          "casestudy_name": "Pharma Order Pipeline Automation",
+          "exact_techs": ["salesforce", "mulesoft"],
+          "semantic_techs": [{"prospect_tech": "snowflake", "matched_tech": "Fabric"}],
+          "summary_solution": "Implemented Salesforce, Mulesoft integration...",
+      },
+      {
+          "casestudy_name": "Loan Origination Platform",
+          "exact_techs": ["salesforce"],
+          "semantic_techs": [],
+          "summary_solution": "Built Salesforce Service Cloud workflow...",
+      }
+    ];
+
+  //Following is template structure of "existing_client_matching_result"
+  existing_client_matching_result
+    {
+        "client_names": "MedTech Corp, FinServ Global, FinServ Global...",
+        "client_urls" : "url1, url2, url3..."
+    }
+
+## "Stage 1": UI Form ##
+  
+  Create a UI with the following fields and store them in the list "meeting_4_tomorrow" for submitting to the backend:
+    - AGENDA (Optional): It captures the meeting topic to be used further as below. Contains meeting agenda text. Call this text field as "meeting_4_tomorrow.AGENDA".
+    
+    - COMPANY_INFORMATION (Optional): Contains company contextual information (Prospect Context) like requirement overview. Call this field as "meeting_4_tomorrow.COMPANY_INFORMATION".
+
+    - COMPANY_TECH_INFO (Mandatory): Contains company technology related information. Tech platforms being used, IT team size, any tech initiatives. Limit this field for only tech information. Call this field as "meeting_4_tomorrow.COMPANY_TECH_INFO".
+
+    - PROSPECT_INDUSTRY (Mandatory): Industry Domain of the prospect company. Call this field as "meeting_4_tomorrow.PROSPECT_INDUSTRY".
+
+    - Company Country:(Mandatory) Country of the prospect company. Call this field as "meeting_4_tomorrow.COMPANY_COUNTRY".
+
+  //"Stage 1" Flow, calling the remaining steps
+  Once the form containing the meeting is captured in the list variable "meeting_4_tomorrow", perform the following three actions upon form submission:
+    Action 1: meeting_4_tomorrow.Perform Step 1: Case Study Matching;
+    Action 2: meeting_4_tomorrow.Perform Step 2: Existing Client Matching;
+    Action 3: meeting_4_tomorrow.Perform Step 3: Brand Matching;
+        
+    assert meeting_4_tomorrow as "Meeting after enrichment: "
+    assert only these following fields of "meeting_4_tomorrow" with respective labels correctly identifying it:
+        - PROSPECT_CONTEXT,
+        - PROSPECT_INDUSTRY,
+        - PROSPECT_TECHNOLOGIES,
+        - PROSPECT_COUNTRY,
+        - case_study_matching_result,
+        - existing_client_matching_result,
+        - brand_result.
+
+  ### Step 1: Case Study Matching ###
+    //Search the internal case study library for relevant case studies to recommend for the meeting.  
+    meeting_4_tomorrow.PROSPECT_CONTEXT = meeting_4_tomorrow.AGENDA + meeting_4_tomorrow.COMPANY_INFORMATION + meeting_4_tomorrow.COMPANY_TECH_INFO;
+
+    meeting_4_tomorrow.PROSPECT_TECHNOLOGIES = Make a Single Claude API call for extracting from COMPANY_TECH_INFO;
+
+    //This function is a reusable routine available in the SMO Python Package that we have built already.
+    MAX_MATCHES = 5;
+    case_study_matching_result = find_casestudy_matches(
+        prospect_context = meeting_4_tomorrow.PROSPECT_CONTEXT,
+        prospect_industry = meeting_4_tomorrow.PROSPECT_INDUSTRY,
+        prospect_technologies = meeting_4_tomorrow.PROSPECT_TECHNOLOGIES,
+        max_matches = MAX_MATCHES
+    );
+    meeting_4_tomorrow.case_study_matching_result = case_study_matching_result;
+
+  ### Step 2: Existing Client Matching ###
+    //Search the internal case study library for relevant case studies to recommend based on the prospect information. Call find_matches with the parameters as mentioned below. 
+
+    Modify "meeting_4_tomorrow.PROSPECT_COUNTRY" field from the input as follows: 
+    {
+      - Use "meeting_4_tomorrow.PROSPECT_COUNTRY" field as "EMEA" for all the countries that are in Middle East, and Africa.
+      - Use "meeting_4_tomorrow.PROSPECT_COUNTRY" field as "USA" for input that says "United States", "United States of America" or "America".
+      - Use "meeting_4_tomorrow.PROSPECT_COUNTRY" field as "UK" for input that says "United Kingdom", "Great Britain", "GB" or "Britain".
+      - Make sure that "meeting_4_tomorrow.PROSPECT_COUNTRY" field is mapped to "EMEA", "USA", "Australia", "Canada" & "UK" only. Any country that skips the above mentioned 3 conditions, should have "meeting_4_tomorrow.PROSPECT_COUNTRY" field default to "USA".
+    }
+
+    Update the "meeting_4_tomorrow.PROSPECT_COUNTRY" field accordingly;
+
+    MAX_MATCHES = 6;
+    //This function is a reusable routine available in the SMO Python Package that we have built already.
+    existing_client_matching_result = find_matches(
+        prospect_industry: meeting_4_tomorrow.PROSPECT_INDUSTRY,
+        prospect_technologies: meeting_4_tomorrow.PROSPECT_TECHNOLOGIES, 
+        prospect_country: meeting_4_tomorrow.PROSPECT_COUNTRY,
+        max_matches: MAX_MATCHES
+    );
+    meeting_4_tomorrow.existing_client_matching_result = existing_client_matching_result;
+
+  ### Step 3: Brand Matching ###
+    //Suggest the brand name to use to the prospect
+    brand_result = find_brand_match(
+      prospect_industry = meeting_4_tomorrow.PROSPECT_INDUSTRY
+    );
+    meeting_4_tomorrow.brand_result = brand_result; 
+
+##  "Stage 2" — Synthesize the meeting brief email (To be run after "Stage 1") ##
+For the list "meetings_4_tomorrow". Display the following information:
+  {
+      - Accordion Control "Casestudies to Reference":      
+        - Start the bullet by mentioning the Matched Case Studies Name with Exact tech matches in brackets next to it.
+        - Utilize each casestudy i.e. meeting_4_tomorrow.case_study_matching_result.summary_solution & meeting_4_tomorrow.prospect_context to weave a conversational flow for all the individual casestudies using Claude;
+        - The resultant flow should be presented in bullets to follow easily.
+
+      - Accordion Control "Existing Clients to Reference":
+        - Display the logos of all the matching clients from the list "meeting_4_tomorrow.existing_client_matching_result";
+        - Underneath each logo should be the name of the client in text but clickable to their respective URL;
+  }

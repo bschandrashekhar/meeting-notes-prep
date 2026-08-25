@@ -109,7 +109,7 @@ _NARRATIVE_SYSTEM_PROMPT = (
 )
 
 
-def _generate_case_study_narrative(
+def generate_case_study_narrative(
     matches: list[dict[str, Any]], prospect_context: str
 ) -> list[str]:
     """Use Claude to weave case study summaries into conversational bullets."""
@@ -291,7 +291,7 @@ def enrich_meeting(meeting: MeetingInput) -> EnrichedMeeting:
 
     # Generate conversational narrative for case studies
     logger.info("Generating case study narrative …")
-    narrative = _generate_case_study_narrative(cs_matches, prospect_context)
+    narrative = generate_case_study_narrative(cs_matches, prospect_context)
 
     # Step 4: Attendee LinkedIn enrichment
     logger.info("Enriching attendees via LinkedIn …")
