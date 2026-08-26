@@ -182,9 +182,10 @@ if st.session_state.form_submitted and st.session_state.enrichment_result:
                 name = cs.get("casestudy_name", "Unnamed")
                 exact_techs = cs.get("exact_techs", [])
                 tech_label = f" [{', '.join(exact_techs)}]" if exact_techs else ""
+                score = cs.get("final_score", 0.0)
                 url = cs.get("url", "")
                 download = f"  [Download ↓]({url})" if url else ""
-                lines.append(f"- **{name}{tech_label}**{download}")
+                lines.append(f"- **{name}{tech_label}** ({score:.3f}){download}")
             st.markdown("\n".join(lines))
 
     # --- Stage 2: Existing Clients ---
