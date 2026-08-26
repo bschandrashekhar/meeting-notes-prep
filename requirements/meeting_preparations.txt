@@ -3,6 +3,8 @@ Important: This project depends on the client_referencing package from the smo-c
 pip install "git+https://github.com/bschandrashekhar/smo-cold-message.git"
 
 ## Definitions ##
+
+
   TECHNOLOGY_RESEARCH = { technology 1, technology 2, technology 3, technology 4 ...} 
 
   SYSTEM_PROMPT = """
