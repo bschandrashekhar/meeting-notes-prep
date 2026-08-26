@@ -30,8 +30,6 @@ pip install "git+https://github.com/bschandrashekhar/smo-cold-message.git"
 ## "Stage 1": UI Form ##
   
   Create a UI with the following fields and store them in the list "meeting_4_tomorrow" for submitting to the backend:
-    - AGENDA (Optional): It captures the meeting topic to be used further as below. Contains meeting agenda text. Call this text field as "meeting_4_tomorrow.AGENDA".    
-    - COMPANY_INFORMATION (Optional): Contains company contextual information (Prospect Context) like requirement overview. Call this field as "meeting_4_tomorrow.COMPANY_INFORMATION".
     - PROSPECT_TECHNOLOGIES (Mandatory): Contains company technology related information. Tech platforms being used, IT team size, any tech initiatives. Limit this field for only tech information. Call this field as "meeting_4_tomorrow.PROSPECT_TECHNOLOGIES".
     - PROSPECT_INDUSTRY (Mandatory): Industry Domain of the prospect company. Call this field as "meeting_4_tomorrow.PROSPECT_INDUSTRY".
     - COUNTRY:(Mandatory) Country of the prospect company. Call this field as "meeting_4_tomorrow.COMPANY_COUNTRY". The drop down to have only these values only :"EMEA", "USA", "Australia", "Canada" & "UK". Default selection to be "USA"
@@ -45,7 +43,7 @@ pip install "git+https://github.com/bschandrashekhar/smo-cold-message.git"
     Action 3: meeting_4_tomorrow.Perform Step 3: Brand Matching;
         
   ### Step 1: Case Study Matching ###
-  
+
     //This function is a reusable routine available in the SMO Python Package that we have built already.   
     meeting_4_tomorrow.case_study_matching_result = find_casestudy_matches(
         prospect_context = "",
