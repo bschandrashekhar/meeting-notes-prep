@@ -100,7 +100,7 @@ if submitted:
             st.error(err)
     else:
         prospect_context = " ".join(
-            filter(None, [agenda.strip(), company_information.strip(), prospect_technologies.strip()])
+            filter(None, [agenda.strip(), company_information.strip()])
         )
         techs_csv = prospect_technologies.strip()
 
