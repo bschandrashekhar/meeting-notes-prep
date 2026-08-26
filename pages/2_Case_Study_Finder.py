@@ -76,6 +76,12 @@ with st.form("prospect_form"):
         height=120,
     )
 
+    col3, col4 = st.columns(2)
+    with col3:
+        max_matches_cs = st.slider("MAX MATCHES — Case Studies", min_value=1, max_value=10, value=5)
+    with col4:
+        max_matches_c = st.slider("MAX MATCHES — Clients", min_value=1, max_value=10, value=6)
+
     submitted = st.form_submit_button("Find Case Studies", type="primary", use_container_width=True)
 
 # ---------------------------------------------------------------------------
@@ -108,7 +114,7 @@ if submitted:
                     prospect_context=prospect_context,
                     prospect_industry=prospect_industry,
                     prospect_technologies=techs_csv,
-                    max_matches=5,
+                    max_matches=max_matches_cs,
                 )
                 cs_matches = [m.to_dict() for m in cs_result.get("matches", [])]
 
@@ -119,7 +125,7 @@ if submitted:
                     prospect_industry=prospect_industry,
                     prospect_technologies=techs_csv,
                     prospect_country=company_country,
-                    max_matches=6,
+                    max_matches=max_matches_c,
                 )
                 client_matches = [m.to_dict() for m in client_result.get("matches", [])]
 
