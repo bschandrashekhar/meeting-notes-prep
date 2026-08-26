@@ -71,7 +71,7 @@ with st.form("prospect_form"):
         )
 
     prospect_technologies = st.text_area(
-        "PROSPECT TECHNOLOGIES *",
+        "PROSPECT TECHNOLOGIES * (comma-separated tech names, e.g. Salesforce, MuleSoft)",
         placeholder="Tech platforms in use, IT team size, ongoing tech initiatives…",
         height=120,
     )
@@ -150,6 +150,8 @@ if submitted:
                 "case_study_matches": cs_matches,
                 "client_matches": client_matches,
                 "brand_result": brand_result,
+                "max_matches_cs": max_matches_cs,
+                "max_matches_c": max_matches_c,
             }
             st.session_state.form_submitted = True
 
@@ -165,6 +167,23 @@ if st.session_state.form_submitted and st.session_state.enrichment_result:
     r = st.session_state.enrichment_result
 
     st.divider()
+
+    # --- Debug: parameters sent to find_casestudy_matches ---
+    with st.expander("Debug — Parameters sent to matching functions", expanded=False):
+        st.markdown("**find_casestudy_matches**")
+        st.json({
+            "prospect_context": r["prospect_context"],
+            "prospect_industry": r["prospect_industry"],
+            "prospect_technologies": r["prospect_technologies"],
+            "max_matches": r.get("max_matches_cs"),
+        })
+        st.markdown("**find_matches**")
+        st.json({
+            "prospect_industry": r["prospect_industry"],
+            "prospect_technologies": r["prospect_technologies"],
+            "prospect_country": r["prospect_country"],
+            "max_matches": r.get("max_matches_c"),
+        })
 
     # --- Stage 2: Case Studies ---
     with st.expander("Case Studies to Reference", expanded=True):
