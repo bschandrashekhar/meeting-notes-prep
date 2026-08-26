@@ -45,13 +45,10 @@ pip install "git+https://github.com/bschandrashekhar/smo-cold-message.git"
     Action 3: meeting_4_tomorrow.Perform Step 3: Brand Matching;
         
   ### Step 1: Case Study Matching ###
-    //Search the internal case study library for relevant case studies to recommend for the meeting.  
-    meeting_4_tomorrow.PROSPECT_CONTEXT = meeting_4_tomorrow.AGENDA + meeting_4_tomorrow.COMPANY_INFORMATION + meeting_4_tomorrow.PROSPECT_TECHNOLOGIES;
-
-    //This function is a reusable routine available in the SMO Python Package that we have built already.
-   
+  
+    //This function is a reusable routine available in the SMO Python Package that we have built already.   
     meeting_4_tomorrow.case_study_matching_result = find_casestudy_matches(
-        prospect_context = meeting_4_tomorrow.PROSPECT_CONTEXT,
+        prospect_context = "",
         prospect_industry = meeting_4_tomorrow.PROSPECT_INDUSTRY,
         prospect_technologies = meeting_4_tomorrow.PROSPECT_TECHNOLOGIES,
         max_matches = MAX_MATCHES_CS

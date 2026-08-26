@@ -46,24 +46,12 @@ with st.form("prospect_form"):
     st.subheader("Prospect Details")
 
     col1, col2 = st.columns(2)
-
     with col1:
-        agenda = st.text_area(
-            "AGENDA (Optional)",
-            placeholder="Meeting topic, goals, discussion points…",
-            height=120,
-        )
-        company_information = st.text_area(
-            "COMPANY INFORMATION (Optional)",
-            placeholder="Requirement overview, company background, pain points…",
-            height=120,
-        )
-
-    with col2:
         prospect_industry = st.text_input(
             "PROSPECT INDUSTRY *",
             placeholder="e.g. Healthcare, Financial Services, Retail…",
         )
+    with col2:
         company_country = st.selectbox(
             "COUNTRY *",
             options=["USA", "EMEA", "Australia", "Canada", "UK"],
@@ -99,9 +87,7 @@ if submitted:
         for err in errors:
             st.error(err)
     else:
-        prospect_context = " ".join(
-            filter(None, [agenda.strip(), company_information.strip()])
-        )
+        prospect_context = ""
         techs_csv = prospect_technologies.strip()
 
         try:
@@ -143,7 +129,6 @@ if submitted:
                 status.update(label="Enrichment complete!", state="complete")
 
             st.session_state.enrichment_result = {
-                "prospect_context": prospect_context,
                 "prospect_industry": prospect_industry.strip(),
                 "prospect_technologies": techs_csv,
                 "prospect_country": company_country,
@@ -172,7 +157,7 @@ if st.session_state.form_submitted and st.session_state.enrichment_result:
     with st.expander("Debug — Parameters sent to matching functions", expanded=False):
         st.markdown("**find_casestudy_matches**")
         st.json({
-            "prospect_context": r["prospect_context"],
+            "prospect_context": "",
             "prospect_industry": r["prospect_industry"],
             "prospect_technologies": r["prospect_technologies"],
             "max_matches": r.get("max_matches_cs"),
